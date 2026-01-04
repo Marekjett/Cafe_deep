@@ -1,0 +1,578 @@
+Acta Universitatis Wratislaviensis No 4058
+PRAWO CCCXXXIII Wrocław 2021
+https://doi.org/10.19195/0524-4544.333.31
+DANIEL WACINKIEWICZ
+ORCID: 0000-0002-5048-9866
+Uniwersytet Szczeciński
+daniel.wacinkiewicz@usz.edu.pl
+Horyzontalny wymiar zasady subsydiarności
+— uwagi w kontekście koncepcji
+decentralizacji i samorządu terytorialnego
+Tadeusza Bigi
+Abstrakt: Spojrzenie przez pryzmat wyników badań prof. Tadeusza Bigi na temat związków pu-
+blicznoprawnych na problematykę zasady pomocniczości doskonale obrazuje sprzężenie, w jakim
+pozostają zasady decentralizacji i subsydiarności. Zasady te znakomicie się uzupełniają, wskazując
+na określony sposób sprawowania władzy — opartej na zrozumieniu publicznej roli, jaką mogą
+i powinni odgrywać w życiu publicznym obywatele i tworzone przez nich instytucje; władzy zdol-
+nej do dzielenia się zadaniami publicznymi z podmiotami prywatnymi (obywatelami, ich grupami,
+wspólnotami, tworzonymi przez nich organizacjami) i wspierającej ich inicjatywy.
+Współcześnie obok wymiaru wertykalnego coraz istotniejszą rolę odgrywa również horyzon-
+talny wymiar zasady subsydiarności. Jego istotą jest zapewnienie takiego sposobu wykonywania
+zadań publicznych, by w jak największym stopniu były one realizowane przez instytucje społeczeń-
+stwa obywatelskiego. Organy administracji publicznej, w tym jednostki samorządu terytorialnego,
+stanowią w takim modelu struktury pośredniczące pomiędzy obywatelami a państwem. Wymaga to
+stworzenia swoistego „podziału pracy” między sektorem publicznym a obywatelskim.
+Słowa kluczowe: subsydiarność, subsydiarność horyzontalna, decentralizacja, samorząd terytorialny.
+Jeśli doskonała demokracja oznacza zespolenie
+(identyfikację) jednostki ze zbiorowością, to sa-
+morząd może być pośrednim etapem tego proce-
+su, jego ogniwem […].
+Tadeusz Bigo, Związki publiczno-prawne w świetle
+ustawodawstwa polskiego, Warszawa 1928, s. 218.Prawo 333, 2021
+© for this edition by CNS
+464 DANIEL WACINKIEWICZ
+Wprowadzenie
+Ponadczasowość jest cechą przynależną jedynie wybitnym dziełom nauko-
+wym. Upływ czasu, zmiany kulturowe, polityczne, społeczne, gospodarcze czy
+technologiczne nie naruszają istoty fundamentalnych ustaleń — czyniąc z nich
+punkt odniesienia dla kolejnych generacji badaczy. Niewątpliwie, z takim dziełem
+mamy do czynienia w przypadku monografii Związki publiczno-prawne w świetle
+ustawodawstwa polskiego Tadeusza Bigi1. W szczególności Jego sposób myśle-
+nia o decentralizacji, samorządzie i demokracji, pomimo upływu przeszło 90 lat
+od chwili powstania dzieła, nie tylko zachowuje zdumiewającą aktualność, ale
+także jest równie inspirujący, jak miało to miejsce w okresie międzywojnia.
+Publikacja ustaleń naukowych Profesora Tadeusza Bigi z końca lat dwudzie-
+stych poprzedniego wieku niemal zbiegła się z wydarzeniem o szczególnej donio-
+słości dla kultury europejskiej, jakim było ostateczne sformułowanie idei subsy-
+diarności w społecznej nauce Kościoła katolickiego. Dokonało się to na kartach
+encykliki Quadragesimo Anno2 papieża Piusa XI. Wpływ tego wydarzenia na for-
+mowanie się ówczesnego kształtu samorządu terytorialnego nie był ani oczywisty
+ani jaskrawo dostrzegany.
+Musiały upłynąć dziesięciolecia i zaistnieć wielkie i dramatyczne wydarze-
+nia historyczne zmieniające kierunki rozwoju naszego kontynentu, by w oparciu
+o tę wyrastającą z założeń personalistycznej koncepcji człowieka ideę zaczęto
+konstruować porządki ustrojowe i prawne. Tym samym idea subsydiarności uzy-
+skała swój prawny wyraz. Stała się — wraz z wartościami takimi jak demokracja,
+poszanowanie praw jednostki, współdziałanie władz, dialog społeczny — jednym
+z fundamentów ustrojowych współczesnych państw europejskich3, a także two-
+rzonych przez nie struktur (w tym Rady Europy i Unii Europejskiej)4.
+1 T. Bigo, Związki publiczno-prawne w świetle ustawodawstwa polskiego, Warszawa 1928.
+2 Pius XI, Quadragesimo Anno z 15 maja 1931 roku, przeł., wstęp i komentarz J. Piwowar-
+czyk, Kielce 1946.
+3 Zasada subsydiarności jest obecna w konstytucjach państw europejskich. Za przykład posłu-
+żyć może Konstytucja Republiki Włoskiej, w której art. 118 zawarto regulację: „Le funzioni ammini-
+strative sono attribuite ai Comuni salvo che, per assicurare ’esercizio unitario, siano conferite a Pro-
+vince, Citta metropolitane, Regioni e Stato, sulla base dei principi di sussidiarieta, differenziazione ed
+adeguatezza”. W oparciu o tę regulację, gminy stanowią podstawowy poziom włoskiego samorządu
+terytorialnego o kompetencji ogólnej; szerzej na ten temat zob. M. Kruczkowski, Zasada pomocniczo-
+ści w prawie publicznym Włoch, „Zeszyty Prawnicze Biura Analiz Sejmowych” 2014, nr 1, s. 58–59.
+4 Zasada subsydiarności znajduje odzwierciedlenie w aktach normatywnych przyjmowanych
+pod auspicjami organizacji takich jak Rada Europy czy Unia Europejska. Pomimo wielości spo-
+sobów rozumienia zasady subsydiarności i jej wpływu na „europejski projekt”, dostrzegalna jest
+zbieżność stanowisk co do celu, jakiemu ma ona służyć w kontekście działalności regionalnych
+organizacji międzynarodowych. Są nimi, jak zauważa M. Cahill, zapobieganie centralizacji („sub-
+sidiarity as a mechanism to prevent centralization at the European level”) i ochrona pozycji państw
+członkowskich („to protect the position of the member states”); zob. idem, Theorizing subsidiarity:
+Towards an ontology-sensitive approach, „International Journal of Constitutional Law” 15, 2017,
+nr 1, s. 203.Prawo 333, 2021
+© for this edition by CNS
+Horyzontalny wymiar zasady subsydiarności 465
+Zasada subsydiarności stała się również jedną z naczelnych zasad ustroju
+Rzeczpospolitej Polskiej, wyrażoną explicite w preambule Konstytucji RP w zwro-
+cie: „prawa podstawowe dla państwa oparte […] na zasadzie pomocniczości umac-
+niającej uprawnienia obywateli i ich wspólnot”. Adresatami tej regulacji są niewąt-
+pliwe wszystkie władze publiczne, bo to ich powinnością jest umacnianie (między
+innymi w swojej działalności) „uprawnień obywateli i ich wspólnot”5.
+Wskazane okoliczności i uwarunkowania skłaniają do przemyślenia, w jaki
+sposób zasada subsydiarności łączy się z ustaleniami prof. Tadeusza Bigi dotyczą-
+cymi decentralizacji i samorządu terytorialnego. W szczególności, interesujące
+jest, jakie znaczenie w tym kontekście należy przypisać tak zwanemu horyzontal-
+nemu aspektowi zasady subsydiarności. Zagadnienie to uczyniono podstawowym
+celem badawczym niniejszego opracowania.
+Wybrane elementy koncepcji decentralizacji
+Tadeusza Bigi
+W koncepcji związków publicznoprawnych Tadeusza Bigi istotną rolę od-
+grywały ustalenia odnoszące się do decentralizacji administracji. Przedmiot zain-
+teresowania stanowiła decentralizacja prawno-administracyjna, oznaczająca „taki
+system — w którym istnieje większa ilość ośrodków administracji publicznej”6.
+5 Choć treść zasady subsydiarności nie została rozwinięta w przepisach Konstytucji RP, to nie
+ulega wątpliwości, że można ją rekonstruować także na gruncie innych jej postanowień (szczególności
+odnoszących się do samorządu terytorialnego). Wynika z nich między innymi, że samorząd terytorialny
+uczestniczy w sprawowaniu władzy publicznej, a przysługującą mu w ramach ustaw istotną część za-
+dań publicznych samorząd wykonuje w imieniu własnym i na własną odpowiedzialność (art. 16 ust. 2).
+Co szczególnie istotne, to właśnie ten samorząd wykonuje zadania publiczne, które nie zostały zastrze-
+żone przez prawo (Konstytucję, ustawy) dla organów innych władz publicznych (art. 163). Wśród
+tych zadań najistotniejszą rolę odgrywają zadania publiczne służące zaspokajaniu potrzeb wspólnoty
+samorządowej. Konstytucja rozstrzyga, że są one wykonywane przez jednostkę samorządu terytorial-
+nego jako zadania własne (art. 166 ust. 1). Konstytucja wskazuje również, że podstawową jednostką
+samorządu terytorialnego jest gmina (art. 164 ust. 1), która — co szczególnie istotne z punktu widzenia
+zasady subsydiarności — stanowi pierwszy, znajdujący się „najbliżej mieszkańców” poziom struktury
+samorządowej. W doktrynie oraz orzecznictwie, jak trafnie zauważa Jerzy Korczak, stało się podstawą
+do szeroko interpretowanych wniosków dotyczących między innymi miejsca samorządu terytorialnego
+w państwie i wzajemnych relacji między organami władzy publicznej. Dekodowanie tego wzorca wciąż
+stwarza wiele możliwości interpretacyjnych, zaś orzecznictwo przypisuje subsydiarności znaczenie
+fundamentalne. Zob. J. Korczak, Konstytucyjne podstawy struktury i funkcji samorządu terytorialnego
+[w:] System Prawa Administracyjnego, t. 2. Konstytucyjne podstawy funkcjonowania administracji pu-
+blicznej, red. R. Hauser, Z. Niewiadomski, A. Wróbel, Warszawa 2012, s. 177. Korczak zwraca uwagę,
+że zasada subsydiarności jest szczególnie przydatna dla konstruowania klauzul kompetencyjnych w ra-
+mach ustroju samorządowego wieloszczeblowego (gdy między jednostkami samorządu zachodzą rela-
+cje organizacyjno-ustrojowe), jak i wielopodmiotowego (jak w Polsce, gdy pomiędzy samorządami po-
+ziomu gminnego, powiatowego i wojewódzkiego nie zachodzą żadne zależności). Zob. ibidem, s. 181.
+6 Ibidem, s. 121.Prawo 333, 2021
+© for this edition by CNS
+466 DANIEL WACINKIEWICZ
+W tym znaczeniu, jak zauważał, „decentralizacja jest to system administracji,
+przy którym podmioty administrujące mają samodzielność w stosunku do cen-
+tralnej władzy. Negatywnie opisujemy rzecz, że decentralizacja polega na uchy-
+leniu hierarchicznego podporządkowania”7. Stanowisko swoje doprecyzowywał
+poprzez uwypuklenie jeszcze dwóch istotnych elementów, stwierdzając: „w po-
+wyższem opisaniu opiera się ona [to jest decentralizacja — D.W.] na momentach
+strukturalnych […]: kto (podmiot) i jak (w sposób samodzielny) administruje”8.
+Dla Tadeusza Bigi „moment treści” był natomiast całkowicie nieistotny — to nie
+on decydował, co jest przedmiotem zdecentralizowanej administracji. Artykuło-
+wał to dobitnie:
+decentralizacja nie ma nic wspólnego z wyobrażeniami treści działalności administracyjnej […].
+Nie treść działalności jest kryterium rozróżnienia systemów: decentralistycznego i centralistyczne-
+go. Nie można przeprowadzić rozgraniczenia według kryterium materialnego; nie ma spraw, które
+z natury swej należą do administracji zdecentralizowanej9.
+Konstatacje te stanowiły punkt wyjścia do ustaleń dotyczących zakresów
+nazw „decentralizacja” i „samorząd”. Tadeusz Bigo za błędne uważał stanowisko
+identyfikujące decentralizację z samorządem i uznające obie nazwy za synonimy
+— stwierdzając: „samorząd jest m. zd. jednym typem decentralizacji, decentrali-
+zacja jest pojęciem szerszem, nadrzędnem”10.
+Na tym tle, konsekwentnie, odrzucał teorie samorządu opierające się na jego
+„momentach materjalnych”, to znaczy „teorie określające samorząd jako zarząd
+spraw o specyficznym charakterze”11. Konstatował:
+moment materjalny występuje w innej postaci w teorjach, według których kwalifikuje się sprawy
+należące do samorządu jako sprawy lokalne. Otóż, rozgraniczenie na sprawy ogólne (państwowe)
+i lokalne jest a prori niemożliwe; nie możemy nigdy powiedzieć, które sprawy „z natury rzeczy”
+mają charakter lokalny. Możemy to uczynić tylko w oparciu — o prawo pozytywne12.
+Zaprezentowane ustalenia, a także refleksje poświęcone klasycznym —
+z dzisiejszej perspektywy — teoriom samorządu terytorialnego, w tym zwłaszcza
+polemiki z innymi wielkimi twórcami myśli samorządowej13 doprowadziły Tade-
+usza Bigę do sformułowania kluczowych tez:
+a) — samorząd jest jednym typem decentralizacji administracji; b) — przedmiot samorządowej
+administracji nie różni się od przedmiotu administracji rządowej; z tego punktu widzenia nie można
+7 Ibidem, s. 123.
+8 Ibidem.
+9 Ibidem. Stanowisko to było konsekwentnie prezentowane przez T. Bigę w kolejnych latach.
+Zob. m.in. T. Bigo, Prawo administracyjne, cz. 1. Instytucje ogólne, oprac. W. Kawka, Wrocław
+1948, zob. zwł. s. 84–86.
+10 T. Bigo, Związki…, s. 124.
+11 Ibidem, s. 125.
+12 Ibidem, s. 126.
+13 W tym zwłaszcza z Jerzym Panejką i jego tezach zawartych w monografii Geneza i podsta-
+wy samorządu europejskiego (1926).Prawo 333, 2021
+© for this edition by CNS
+Horyzontalny wymiar zasady subsydiarności 467
+przeciwstawić administracji samorządowej — administracji państwowej, bo samorząd jest tylko od-
+mienną formą organizacyjną administracji państwowej; c) — takie przeciwstawienie jest natomiast
+dopuszczalne z punktu widzenia podmiotów administracji, bo podmiotem administracji samorzą-
+dowej jest nie państwo, ale odrębne podmioty, odrębne osoby prawne14. Dlatego nie uważam, ja-
+koby przeciwstawienie: administracja państwowa i samorządowa — było bezsensem z tego punktu
+widzenia […] d) — jednostki samorządowe jako osoby prawne wyróżniają się tem, że posiadają
+obowiązki i prawa (publiczne), zapewniające im stanowisko równorzędne z władzami rządowemi
+tj. władztwo15 administracyjne16.
+Źródła i istota zasady subsydiarności
+Równolegle do prezentacji poglądów Bigi na temat związków publiczno-
+prawnych wyraźnie wyeksplikowana została jedna z najistotniejszych idei dla
+współczesnych państw demokratycznych — idea subsydiarności.
+Sformułowana w latach trzydziestych XX wieku w opozycji do socjalizmu
+(w jego dwóch głównych nurtach — komunizmu i socjaldemokratyzmu), a także
+liberalizmu, idea subsydiarności stanowiła próbę odnowienia ustroju społeczne-
+go. Odegrała i wciąż odgrywa ważną rolę w kształtowaniu myśli społeczno-po-
+lityczno-prawnej, przynosząc odpowiedzi na fundamentalne pytania: po co jest
+władza? Jakim celom powinna ona służyć i jaką rolę ma odgrywać?17 Jaki jest za-
+kres samodzielności i samowystarczalności obywatela, grup społecznych, mniej-
+szych i większych społeczności w różnych sferach funkcjonowania państwa?18
+Źródeł idei subsydiarności — myśli i refleksji filozoficznej, która ukształto-
+wała współczesne rozumienie tej zasady19 — poszukiwać możemy na różnych
+etapach rozwoju kultury europejskiej. Pojawia się ona już w filozofii antycznej
+u Arystotelesa20 jako ważne rozwinięcie jego filozofii polityki, stanowiąc impli-
+14 Tę cechę T. Bigo wyraźnie podkreślał i eksplikował w dalszej części wywodu: „Tem co
+indywidualizuje samorząd i wyodrębnia spośród administracji jest — osobowość prawna jednostek
+samorządowych” — idem, Związki…, s. 141.
+15 „Związki publ.-prawne posiadają władztwo administracyjne, a zatem — są one (albo raczej
+ich działalność) częścią administracji publicznej. Samorząd zaś jest zdecentralizowaną administra-
+cją, wykonywaną przez samodzielne związki. Zatem związki publ.-prawne są związkami samo-
+rządowemi. Związki publiczno-prawne i związki samorządowe — to dwa synonimy: zakresy tych
+nazw pokrywają się. Samorząd jest oznaczeniem formy administracji, wyraża stosunek osób admi-
+nistrujących do państwa, określa tylko jedną relację podmiotu administracji. Związek publ.-prawny
+jest oznaczeniem samego podmiotu administracji” — ibidem, s. 154.
+16 Ibidem, s. 140–141.
+17 Ch. Millon-Delsol, Zasada pomocniczości, Kraków 1995, s. 6–7.
+18 B. Dolnicki, Samorząd terytorialny, Warszawa 2012, s. 23.
+19 Szerzej na ten temat zob. D. Wacinkiewicz, Zaspokajanie potrzeb wspólnot samorządo-
+wych. Studium administracyjnoprawne, Warszawa 2016, s. 289–294.
+20 To zapewne Platońska myśl, że „państwo tworzy się dlatego, że żaden z nas nie jest samo-
+wystarczalny, tylko mu potrzeba wielu innych. Albo jaki, myślisz, może być inny początek i zasadaPrawo 333, 2021
+© for this edition by CNS
+468 DANIEL WACINKIEWICZ
+kację krytyki komunizmu Platona21. Jest obecna w średniowiecznej nauce św. To-
+masza z Akwinu, a także w oświeceniowych koncepcjach Johna Locke’a i Jeana-
+-Jacques’a Rousseau. Jednak niewątpliwym momentem przełomowym jest było
+wyrażenie jej założeń w społecznej nauce Kościoła katolickiego.
+Mimo że po raz pierwszy idea subsydiarności znalazła wyraz w encyklice
+Rerum Novarum z 1891 roku22, to wyraźne jej nazwanie, a także sformułowanie
+reguł subsydiarności, dokonało się 40 lat później, w encyklice Piusa XI Quadra-
+gesimo Anno z 1931 roku. Jej istotę najpełniej wyraża myśl, że to, co jednostka,
+małe społeczności czy wspólnoty mogą uczynić z własnej inicjatywy i własnymi
+siłami, nie wolno im zabierać na rzecz społeczeństwa. Odbieranie im zadań, które
+są w stanie realizować jest traktowane na gruncie Quadragesimo Anno jako „nie-
+sprawiedliwość i szkoda społeczna”23. Każda interwencja w życie społeczne ze
+względu na swój cel i na swoją naturę winna mieć charakter pomocniczy — po-
+magając organizmowi społecznemu, a nie pochłaniając go24.
+zakładania państw?” (zob. Platon, Państwo, ks. II, 369 B, przeł. W. Witwicki, Kęty 2003), znajduje
+się u źródeł inspiracji Arystotelesa, które rozwinięte zostały w jego Polityce.
+21 J. Finnis, Prawo naturalne i uprawnienia naturalne, przeł. K. Lossman, Warszawa 2001,
+s. 177.
+22 Leon XIII, Rerum Novarum z 15 maja 1891 roku, przeł., wstęp i objaśnienia J. Piwowar-
+czyk, Kraków 1931. Za słuszną i uzasadnioną opiekę uznano w niej konieczność udzielenia przez
+państwo pomocy rodzinie znajdującej się w trudnej sytuacji („jeśli się jakaś rodzina znajdzie w wiel-
+kich trudnościach i bez rady, że sama się z nich wyzwolić nie może, jest rzeczą słuszną, by jej w tych
+ostatecznościach państwo udzieliło pomocy […] będzie to niepochłanianiem praw obywatelskich,
+ale ich obroną i wykonywaniem słusznej, a powinnej opieki” — ibidem, s. 33 oraz „prawo wyma-
+ga, żeby ani jednostka, ani rodzina nie była pochłaniana przez państwo; jest więc rzeczą słuszną,
+by i jednostka i rodzina miała swobodę działania” — ibidem, s. 61). Nie ulega żadnej wątpliwo-
+ści, że Leon XIII ma świadomość zagrożeń jakie niesie za sobą interwencjonizm państwowy. Jak
+komentuje ten fragment Encykliki ks. J. Piwowarczyk, „zastosowany bez ograniczeń łatwo może
+doprowadzić do zupełnego pochłonięcia społeczeństwa (praw jednostek, rodzin, innych naturalnych
+zrzeszeń) przez państwo, do zniweczenia inicjatywy i własności prywatnej” — ibidem, s. 62).
+23 Pius XI wyraża to w następujących słowach: „niewzruszalnym i niezmiennym pozostaje to
+ważne prawo filozofii społecznej: jak nie wolno jednostkom wydzierać i na społeczeństwo przeno-
+sić tego, co mogą wykonać z własnej inicjatywy i własnymi siłami, podobnie niesprawiedliwością,
+szkoda społeczną i zakłóceniem porządku jest zabieranie mniejszym i niższym społecznościom tych
+zadań, które mogą spełnić, i przekazywanie ich społecznościom większym i wyższym” — Quadra-
+gesimo Anno, s. 58.
+24 Do kwestii proporcjonalności działania ze strony państwa nawiązywał także Jan Paweł II
+w encyklice Centesimus Annus, wydanej w stulecie ukazania się Rerum Novarum, stwierdzając:
+„Niesprawności i niedostatki w Państwie opiekuńczym wynikają z nieodpowiedniego rozumienia
+właściwych Państwu zadań. Także w tej dziedzinie winna być przestrzegana zasada pomocniczości,
+która głosi, że społeczność wyższego rzędu nie powinna ingerować w wewnętrzne sprawy społecz-
+ności niższego rzędu, pozbawiając ją kompetencji, lecz raczej winna wspierać ją w razie konieczno-
+ści i pomóc w koordynacji jej działań z działaniami innych grup społecznych, dla dobra wspólnego”.
+Konsekwencje błędnego pojmowania roli (zadań) państwa są aż nadto oczywiste, a zarazem nega-
+tywne. Zob. Jan Paweł II, Encyklika Centesimus annus, [w:] Encykliki Ojca Świętego Jana Pawła II,
+t. 2, Kraków 1996, s. 517–518.Prawo 333, 2021
+© for this edition by CNS
+Horyzontalny wymiar zasady subsydiarności 469
+Dla wyrastającej z założeń personalistycznej koncepcji człowieka zasady
+subsydiarności kluczową, centralną wartość stanowi przyrodzona godność każdej
+osoby ludzkiej25. Niezależnie od jej źródeł, przejawów i natury, godność człowie-
+ka jest etycznym i prawnym wyrazem potrzeby autonomii, szacunku, poważania
+jak i samorealizacji, z kolei potrzeba godnego traktowania tkwi w każdej osobie
+ludzkiej26. To właśnie z poszanowania ludzkiej godności wynika — kluczowe
+dla realizacji zasady subsydiarności — ustalenie, iż ludzie wolni i odpowiadający
+za swoje działania są zarazem, w pierwszej kolejności, sami odpowiedzialni za
+zaspokajanie swoich własnych potrzeb. Mogą do tego celu wykorzystać wszelkie
+posiadane uprawnienia, zasoby i możliwości — a ich dobór jest kwestią wyboru
+(wolnej woli) jednostki.
+Niemożności zaspokajania niezbędnych potrzeb we własnym zakresie, otwie-
+ra przestrzeń do wsparcia osoby potrzebującej „z zewnątrz” — to znaczy ze stro-
+ny społeczności, wspólnot i instytucji społeczeństwa obywatelskiego. Kolejność
+interwencji wyznacza swoista bliskość podmiotu wspierającego względem osoby
+potrzebującej. I tak, w pierwszej kolejności pomoc pochodzi od najbliższej wspól-
+noty, jaką stanowi rodzina. Następnie, uwzględniając fakt, że żyjemy w społe-
+czeństwie zorganizowanym (składającym się z wielu poziomów zorganizowania),
+otwiera się przestrzeń dla interwencji instytucji społeczeństwa obywatelskiego
+(w szczególności organizacji pozarządowych).
+Dopiero niemożność zaspokojenia swoich potrzeb związana z nieprzezwy-
+ciężalnymi trudnościami, w ramach działania tak indywidualnego (samodziel-
+nego), jak i zbiorowego (wspólnotowego, kolektywnego), stwarza podstawę do
+działania ze strony władzy publicznej. To wówczas bowiem pojawia się zadanie
+publiczne27. Jego istotą i treścią jest pomoc osobom potrzebującym w pokonywa-
+niu problemów życiowych, nieprzezwyciężalnych za pomocą własnych upraw-
+nień, zasobów i możliwości, a także usuwanie przyczyn takiego stanu i przywró-
+cenie osoby do normalnego funkcjonowania społecznego — służą umożliwieniu
+życia w warunkach odpowiadających godności człowieka.
+Tak rozumiane uzasadnienie interwencji ze strony władzy publicznej wy-
+maga jeszcze jednego wyraźnego uzupełnienia: władze publiczne działać mają
+wyłącznie w celu i w granicach koniecznej pomocy. Jedynie wówczas mają one
+obowiązek przychodzić z pomocą osobom potrzebującym. Nie ma tu mowy o do-
+wolności, swobodzie zakresu działań ze strony władz publicznych, a już tym bar-
+dziej o przyzwoleniu na nadmiernie szeroki zakres interwencji.
+Zaprezentowany sposób pojmowania zasady subsydiarności pozwala na: po
+pierwsze, określenie istoty zadań publicznych (rozwiązywanie problemów jed-
+nostkowych i zbiorowych, nierozwiązywalnych w ramach społeczeństwa obywa-
+25 H. Izdebski, Doktryny polityczno-prawne. Fundamenty współczesnych państw, Warszawa
+2015, s. 171.
+26 D. Wacinkiewicz, op. cit., s. 494.
+27 H. Izdebski, Samorząd terytorialny. Podstawy ustroju i działalności, Warszawa 2011, s. 147.Prawo 333, 2021
+© for this edition by CNS
+470 DANIEL WACINKIEWICZ
+telskiego); po drugie — dokonanie podziału zadań publicznych pomiędzy różne
+poziomy władz publicznych (to znaczy pionowy podział zadań publicznych po-
+między poszczególne władze).
+Oba wymienione aspekty tradycyjnie zalicza się do kategorii tak zwanej subsy-
+diarności wertykalnej (pionowej). Obok nich dostrzega się istnienie trzeciego aspek-
+tu zasady subsydiarności — a mianowicie subsydiarności horyzontalnej (poziomej).
+Subsydiarność horyzontalna
+Współcześnie to nie klasyczne, wertykalne aspekty zasady subsydiarności sku-
+piają największą uwagę badaczy nauk społecznych i humanistycznych (w tym praw-
+ników, socjologów, politologów czy filozofów), lecz jej horyzontalny wymiar28.
+Jak stwierdza Hubert Izdebski, ten aspekt zasady subsydiarności stanowi „im-
+plikację zasady społeczeństwa obywatelskiego w powiązaniu z zasadą dialogu
+społecznego” i polega na zapewnieniu takiego sposobu wykonywania zadań pu-
+blicznych, by w jak największym stopniu były one realizowane przez instytucje
+społeczeństwa obywatelskiego. Dzięki temu ma być zapewnione dobro wspólne29.
+W literaturze obcojęzycznej subsydiarność horyzontalna bywa różnie charak-
+teryzowana. Niekiedy akcentuje się, że jej treścią jest delegowanie tworzenia po-
+lityk publicznych do podmiotów niepaństwowych (niepublicznych) — do których
+zalicza się przedsiębiorców, organizacje pozarządowe i innych uczestników spo-
+łeczeństwa obywatelskiego30. W innych ujęciach zauważa się także, że horyzon-
+talny wymiar zasady subsydiarności umożliwia postrzeganie społeczeństwa jako
+konglomeratu różnych dziedzin: rynku, państwa i społeczeństwa obywatelskiego
+wraz ze swoją specyfiką i unikalnymi mechanizmami koordynacji31. Inni autorzy,
+eksponują z kolei, że zróżnicowany charakter ustaleń społecznych wynikający
+ze współpracy różnych interesariuszy32, nadto dostrzegając, że elementy takie
+jak aktywna partycypacja, zaangażowanie, sieciowanie współpracy podmiotów
+z różnych obszarów (administracji, biznesu, społeczeństwa obywatelskiego) są
+w tym procesie niejako celami samym w sobie.
+Nierzadko znaczące różnice poglądów na jej temat, a także różnorodne ak-
+centowanie elementów istotnych pojęcia i konstrukcji horyzontalnego aspektu
+28 Zob. też D. Wacinkiewicz, Horizontal dimension of subsidiarity in the activity of Polish local
+government, Granada 2020, s. 11224–11229.
+29 H. Izdebski, Doktryny polityczno-prawne. Fundamenty współczesnych państw, Warszawa
+2015, s. 172–173.
+30 A. Colombo, The Principle of Subsidiarity and European Citizenship, Milan 2004, s. 39.
+31 W. van de Donk, Subsidiarity as an experience and inspiration: The case for Regionomics
+in North Brabant, „European View” 18, 2019, nr 1, s. 47.
+32 R. Mulé, G. Walzenbach, Introduction: two spaces of subsidiarity?, „Commonwealth &
+Comparative Politics” 57, 2019, nr 2, s. 141.Prawo 333, 2021
+© for this edition by CNS
+Horyzontalny wymiar zasady subsydiarności 471
+zasady subsydiarności nie są niczym zaskakującym. Skądinąd, podobny wielo-
+głos towarzyszy sposobom pojmowania, opisywania i definiowania również sub-
+sydiarności wertykalnej. Jest to o tyle zrozumiałe, że jak powyżej wskazywałem,
+problematyka ta stanowi przedmiot badań różnych dyscyplin naukowych. Uznać
+zatem należy, że również na grunt analiz prawniczych trafia z całym swoim bo-
+gactwem znaczeń ustalonym już przez fizjologów, socjologów czy politologów.
+Co więcej, stanowi takiemu sprzyja okoliczność, że normatywne odzwierciedle-
+nie zasady subsydiarności horyzontalnej w porządkach prawnych poszczególnych
+państw (organizacji międzynarodowych) jest stosunkowo skromne33, przyjmowa-
+ne zaś rozwiązania — zróżnicowane34.
+Na gruncie powyższego i mając na względzie zasadniczy cel badawczy niniej-
+szego opracowania, uwagę musimy skupić na, zdawać by się mogło, dość oczywi-
+stej kwestii – w jakim związku pozostają ze sobą decentralizacja i subsydiarność.
+Przypomnijmy, że Tadeusz Bigo charakteryzował decentralizację jako sys-
+tem, w którym istnieje większa ilość ośrodków administracji publicznej mających
+samodzielność w stosunku do władzy centralnej. Z kolei subsydiarność, zgodnie
+z przyjętym wcześniej znaczeniem, wymaga wielopoziomowego (wieloszczeblo-
+wego) i opartego właśnie na zasadzie decentralizacji podziału władzy w organiza-
+cji państwowej. W oparciu o niego realizowany jest podział zadań i kompetencji
+wyrażający ideę: zadania zaspokajające potrzeby obywateli (wspólnot samorzą-
+dowych) powinny być wykonywane przez organy znajdujące się najbliżej nich.
+Realizacja zadań przez wyższe poziomy struktur administracyjnych jest uzasad-
+niona, gdy przekracza to możliwości struktur niższego stopnia, a tym samym jest
+to bardziej efektywne. Organy wyższych poziomów albo szczebli struktur admi-
+nistracyjnych powinny wspomagać i uzupełniać działalność organów niższych
+dopiero wówczas, gdy te nie są samowystarczalne.
+33 Wyrażenie zasady subsydiarności horyzontalnej w regulacji prawnej rangi konstytucyjnej
+jest sytuacją wyjątkową. Najbardziej jaskrawą egzemplifikację stanowi art. 118 Konstytucji Repu-
+bliki Włoskiej. Zgodnie z nim: państwo, regiony, miasta metropolitalne, prowincje i gminy sprzyjają
+niezależnej inicjatywie obywateli, (zarówno działających indywidualnie, jak i stowarzyszonych), któ-
+ra to inicjatywa służy działaniom na rzecz interesu powszechnego, zgodnie z zasadą subsydiarności
+(art. 118 La Costituzione: “Stato, Regioni, Città metropolitane, Province e Comuni favoriscono l’au-
+tonoma iniziativa dei cittadini, singoli e associati, per lo svolgimento di attività di interesse generale,
+sulla base del principio di sussidiarietà”. Źródło: https://www.senato.it/1025?sezione=136&articolo_
+numero_articolo=118 (dostęp: 22.04.2021). W literaturze zwraca się uwagę, że zasada pomocniczo-
+ści doznaje w tym przepisie ograniczenia przez klauzulę interesu powszechnego (interesse generale).
+Pomocniczość we włoskim przypadku — odmiennie niż w polskich rozwiązaniach — dotyczy więc
+tylko tej aktywności obywateli, która służy interesowi powszechnemu. Zob. na ten temat M. Krucz-
+kowski, op. cit., s. 58. Niewątpliwie jednak z regulacji tej wywodzić można dyrektywę powierzania
+wykonywania zadań publicznych instytucjom społeczeństwa obywatelskiego.
+34 Porządki prawne poszczególnych państw europejskich, jak i prawne ramy funkcjonowania
+organizacji międzynarodowych (prawo pierwotne i prawo wtórne) mogą regulować zasadę subsydiar-
+ności na różne sposoby — czyniąc z niej zarówno „twardą dyrektywę”, jak i „miękką rekomendację”.Prawo 333, 2021
+© for this edition by CNS
+472 DANIEL WACINKIEWICZ
+Powstały w ten sposób system dystrybucji zadań w ramach administracji
+publicznej (rządowej i samorządowej) oparty jest o założenie realizacji jak naj-
+szerszego zakresu zadań publicznych na poziomie władzy najbliższemu obywa-
+telowi. Podkreślenia zarazem wymaga, że ta sama reguła znajduje zastosowanie
+do poza-administracyjnych form organizacji społeczeństwa — rodzina pomaga
+jednostce, rodzinie pomaga wspólnota i organizacje sektora obywatelskiego itp.
+Skłania to ku konstatacji, bardzo trafnie wyrażonej przez Irenę Lipowicz, że zasa-
+da pomocniczości i zasada decentralizacji znakomicie się uzupełniają — chodzi
+bowiem o sposób postrzegania sprawowania władzy jako wyrastającej ze wspól-
+noty podstawowej z dołu do góry35. Patrząc z tej perspektywy — organy admini-
+stracji publicznej, w tym jednostki samorządu terytorialnego, stanowią struktury
+pośredniczące pomiędzy obywatelami a państwem.
+Nałóżmy na powyższe zaproponowany wcześniej sposób pojmowania subsy-
+diarności horyzontalnej — jako wyrażającej dyrektywę jak największego stopnia
+realizacji zadań publicznych przez instytucje społeczeństwa obywatelskiego. Chcąc
+zwiększać rolę tych ostatnich, a zarazem podkreślać znaczenie partycypacji obywa-
+teli w życiu społecznym, powinniśmy postrzegać zasadę subsydiarności nie tylko
+jako na regułę ustawowo uregulowanego rozproszenia władzy pomiędzy instytucje
+publiczne, ale również jako zasadę uznającą publiczną rolę aktorów niepublicznych
+— obywateli i organizacji pozarządowych. W tym kontekście to właśnie aspekt ho-
+ryzontalny był w istocie pierwotnym znaczeniem zasady subsydiarności36.
+W analizach poświęconych interesującemu nas zagadnieniu pewien element
+wart jest wyraźnego podkreślenia: subsydiarność pozioma jest ukierunkowana na
+realizację interesu publicznego37. Jest to cecha wyróżniająca (nabierająca istotne-
+go znaczenia wówczas, gdy przypomnimy, że nie wszystkie działania organizacji
+sektora obywatelskiego muszą ją posiadać)38. W przypadku zasady subsydiarno-
+ści horyzontalnej chodzi jednak o realizację zadań publicznych. Obywatele ini-
+cjują w ten sposób działania służące realizacji dobra wspólnego. Tu dochodzimy
+do niezwykle istotnej kwestii — wyrażającej złożoność i trudność realizacji zasa-
+dy subsydiarności poziomej. Otóż przekazywanie zadań publicznych do wykony-
+wania instytucjom społeczeństwa obywatelskiego wymaga stworzenia swoistego
+„podział pracy” pomiędzy sektorem publicznym i obywatelskim39. Pomocniczość
+horyzontalna odnosi się przecież do dzielenia się kompetencjami i inicjatywami
+pomiędzy podmiotami publicznymi i prywatnymi (obywatelami, instytucjami
+35 I. Lipowicz, Samorząd terytorialny XXI wieku, Warszawa 2019, s. 137–138.
+36 Zob. A. Colombo, op. cit., s. 15.
+37 Ibidem, s. 44.
+38 Odnosząc tę kwestię do polskich uwarunkowań ustrojowo-prawnych, możemy powiedzieć,
+że o ile w ramach działań mieszczących się w zasadzie subsydiarności horyzontalnej obywatele
+inicjują działania służące realizacji zasady dobra wspólnego, to w przypadku wolności zrzeszania
+się, na przykład w ramach uczestnictwa w stowarzyszeniach, realizowane mogą być cele, które nie
+są ani społecznie użyteczne, ani nawet realne.
+39 Ibidem, s. 16.Prawo 333, 2021
+© for this edition by CNS
+Horyzontalny wymiar zasady subsydiarności 473
+sektora pozarządowego). Wymaga to zatem, w wymiarze negatywnym, powstrzy-
+mania się przez władzę publiczną od realizacji zadań, które mogą być realizowane
+przez jednostki, grupy społeczne, wspólnoty, instytucje społeczeństwa obywatel-
+skiego), natomiast w wymiarze pozytywnym — obowiązku udzielania pomocy ze
+strony władzy publicznej wymienionym podmiotom, oznaczającej zarówno po-
+budzanie, inspirowanie, podtrzymywanie, a także uzupełnianie ich wysiłków)40.
+Są to dwa integralne wymiary zasady pomocniczości poziomej. Doskonale ten
+stan wyraża Stanisław Konopacki: „idea pomocniczości jest zaprzeczeniem raz
+na zawsze ustalonego podziału kompetencji. Jest wyrazem poszukiwania, ciągle
+niestałej równowagi między potrzebą ingerencji z jednej strony i koniecznością
+nieingerencji z drugiej”41.
+W nieprawniczej literaturze przedmiotu podnoszona jest kwestia rozróżnienia
+pomiędzy uczestnictwem i demokracją partycypacyjną a subsydiarnością horyzon-
+talną. Alessandro Colombo w swojej rozbudowanej analizie poświęconej zasadzie
+subsydiarności (w jej wymiarach wertykalnym i horyzontalnym) zwraca uwagę na
+pewną znaczącą różnicę. Mianowicie, jak stwierdza, zasady uczestnictwa i demo-
+kracji partycypacyjnej nie wyrażają tak samo jednoznacznie (jak czyni to zasada
+subsydiarności horyzontalnej), że obywatele nie tylko muszą być konsultowani
+i włączani do spraw publicznych (poprzez różne instytucje) — ale przede wszyst-
+kim, że mają oni prawo podejmowania niezależnych inicjatyw, niekoniecznie
+oczekując na wykonanie pierwszego kroku przez instytucje publiczne42.
+Nie podzielam stanowiska co do swoiście biernego statusu obywateli w de-
+mokracji partycypacyjnej. Bliższy jest mi pogląd Giovanniego Sartori na ten temat
+i prezentowana przez niego teoria uczestnictwa43. W głównym nurcie teorii demo-
+kracji nie tylko podkreśla się znaczenie uczestnictwa dla demokracji, ale przede
+wszystkim charakteryzuje się je jako „zaangażowanie osobiste i aktywne”44.
+Zapewne granica podziału pomiędzy demokracją partycypacyjną a subsydiar-
+nością horyzontalną oparta o kryterium „intensywności uczestnictwa obywateli”
+jest zbyt nieostra, by się na niej oprzeć. Tym niemniej, dopełniając charaktery-
+styki zasady subsydiarności horyzontalnej, warto jest podkreślić jej jednoznacz-
+nie aktywny charakter. To reprezentanci społeczeństwa obywatelskiego z własnej
+inicjatywy podejmują działania, których treścią jest realizacja zadań publicznych.
+40 Por. Ch. Millon-Delsol, op. cit., s. 8–9.
+41 S. Konopacki, Ponowoczesna subsydiarność, „Kultura Współczesna. Teorie. Interpretacje.
+Praktyka” 1997, nr 1, s. 95.
+42 A. Colombo, op. cit., s. 43–44.
+43 G. Sartori podkreśla, że właściwie i sensownie pojmowane uczestnictwo polega na „osobi-
+stym udziale, aktywnym i chętnym włączaniu się”. Nie jest więc ono prozaicznym „byciem częścią
+czegoś”, a tym bardziej nie chcianym, przymusowym „włączaniem do czegoś”. Uczestnictwo —
+stwierdza Sartori — to „ruch samoistny, dokładne przeciwieństwo bycia włączonym w ruch (z cu-
+dzej woli)…” — idem, Teoria demokracji, przeł. P. Amsterdamski, Warszawa 1998, s. 148.
+44 Ibidem, s. 148–149.Prawo 333, 2021
+© for this edition by CNS
+474 DANIEL WACINKIEWICZ
+Zakończenie
+Fundamentalne ustalenia Profesora Tadeusza Bigi dotyczące istoty związków
+publicznoprawnych wciąż inspirują do badań nad współczesnym znaczeniem kor-
+poracji terytorialnych, ich funkcjami i rolą jaką odgrywają we współczesnej de-
+mokracji.
+Spojrzenie przez ich pryzmat na problematykę zasady pomocniczości do-
+skonale obrazuje zależność, w jakiej pozostają zasada decentralizacji i zasada
+subsydiarności. Ich sprzęgnięcie wyraża określoną filozofię sprawowania wła-
+dzy w państwie — władzy, której rolą nie jest wyręczać (zastępować) jednostki
+(społeczności) w zaspokajaniu ich potrzeb, lecz je wspierać i udzielać pomocy
+wówczas, gdy jednostki nie są w stanie zaspokoić potrzeb w warunkach dzia-
+łania indywidualnego (samodzielnego), jak i zbiorowego (wspólnotowego). Co
+więcej — taka władza musi być zdolna do dzielenia się zadaniami publicznymi
+z podmiotami prywatnymi (obywatelami, ich grupami, wspólnotami, tworzonymi
+przez nich organizacjami) i wspierającej ich inicjatywy. Przede wszystkim jed-
+nak, to władza uznająca publiczną rolę, jaką mogą i powinni odgrywać w życiu
+publicznym obywatele i tworzone przez nich instytucje. Jest to tym samym afir-
+macja władzy wyrastającej ze poziomu wspólnoty podstawowej.
+Taki sposób pojmowania sprzęgnięcia ze sobą zasad decentralizacji i subsy-
+diarności, wynikających z tego konsekwencji, roli, jaką w tym zakresie mają do
+odegrania struktury samorządowe, w mojej ocenie odpowiada refleksji Tadeusza
+Bigi (zawartej w motto niniejszego opracowania) co do roli samorządu terytorial-
+nego jako ogniwa w procesie zespalania jednostki ze zbiorowością.
+* * *
+„Za każdym wybitnym człowiekiem stoi wybitny nauczyciel. Gdy każdy
+z nas zastanawia się nad tym czego dokona w życiu, najprawdopodobniej uda
+mu się to osiągnąć, jeśli tylko będzie miał dobrego nauczyciela”45. Tą myślą
+Stephen Hawking, jeden z najwybitniejszych w historii fizyków teoretycznych,
+podkreślał rolę postaci nauczyciela. Zdanie to nabiera szczególnego znaczenia
+współcześnie, gdy, jesteśmy świadkami globalnego buntu przeciwko autorytetom,
+w tym zwłaszcza autorytetom naukowym46 — dodawał. Niewątpliwie prof. Tade-
+usz Bigo, współtwórca wrocławskiej szkoły administracyjnej, jeden z luminarzy
+nauki polskiej, najpełniej odpowiada Hawkingowskiemu wyobrażeniu nauczy-
+45 S. Hawking, Krótkie odpowiedzi na wielkie pytania, przeł. M. Krośniak, Poznań 2018, s. 232.
+46 Ibidem.Prawo 333, 2021
+© for this edition by CNS
+Horyzontalny wymiar zasady subsydiarności 475
+ciela. Pod tym zdaniem podpisać się mogą całe pokolenia badaczy ośrodka wro-
+cławskiego. I nie tylko oni. Również ci naukowcy, którym nie było dane bezpo-
+średniego zetknąć się z prof. Tadeuszem Bigą, mogą korzystać z jego naukowej
+spuścizny. Jest ona wciąż żywa, nieustająco inspirująca i pozwala na specyficzny
+ogląd „samorządowej współczesności” współczesnego modelu samorządu teryto-
+rialnego z perspektywy dokonanych przez niego kanonicznych ustaleń.
+Bibliografia
+Bigo T., Związki publiczno-prawne w świetle ustawodawstwa polskiego, Warszawa 1928.
+Bigo T., Prawo administracyjne, cz. 1. Instytucje ogólne, oprac. W. Kawka, Wrocław 1948.
+Cahill M., Theorizing Subsidiarity: Towards an ontology-sensitive approach, „International Journal
+of Constitutional Law” 15, 2017, nr 1.
+Colombo A., The Principle of Subsidiarity and European Citizenship, Milan 2004.
+Dolnicki B., Samorząd terytorialny, Warszawa 2012.
+Donk W. van de, Subsidiarity as an experience and inspiration: The case for Regionomics in North
+Brabant, „European View” 18, 2019, nr 1.
+Finnis J., Prawo naturalne i uprawnienia naturalne, przeł. K. Lossman, Warszawa 2001.
+Hawking S., Krótkie odpowiedzi na wielkie pytania, przeł. M. Krośniak, Poznań 2018.
+Izdebski H., Doktryny polityczno-prawne. Fundamenty współczesnych państw, Warszawa 2015.
+Izdebski H., Samorząd terytorialny. Podstawy ustroju i działalności, Warszawa 2011.
+Jan Paweł II, Encyklika Centesimus annus, [w:] Encykliki Ojca Świętego Jana Pawła II, t. 2, Kra-
+ków 1996.
+Konopacki S., Ponowoczesna subsydiarność, „Kultura Współczesna. Teorie. Interpretacje. Prakty-
+ka” 1997, nr 1.
+Korczak J., Konstytucyjne podstawy struktury i funkcji samorządu terytorialnego, [w:] System Pra-
+wa Administracyjnego, t. 2. Konstytucyjne podstawy funkcjonowania administracji publicznej,
+red. R. Hauser, Z. Niewiadomski, A. Wróbel, Warszawa 2012.
+Kruczkowski M., Zasada pomocniczości w prawie publicznym Włoch, „Zeszyty Prawnicze Biura
+Analiz Sejmowych” 2014, nr 1.
+Leon XIII, Rerum Novarum z 15 maja 1891 roku, przeł., wstęp i objaśnienia J. Piwowarczyk, Kra-
+ków 1931.
+Lipowicz I., Samorząd terytorialny XXI wieku, Warszawa 2019.
+Millon-Delsol Ch., Zasada pomocniczości, Kraków 1995.
+Mulé R., Walzenbach G., Introduction: two spaces of subsidiarity?, „Commonwealth & Compara-
+tive Politics” 57, 2019, nr 2.
+Panejko J., Geneza i podstawy samorządu europejskiego, Paryż 1926.
+Pius XI, Quadragesimo Anno z 15 maja 1931 roku, przeł., wstęp i komentarz J. Piwowarczyk,
+Kielce 1946.
+Platon, Państwo, przeł. W. Witwicki, Kęty 2003.
+Sartori G., Teoria demokracji, przeł. P. Amsterdamski, D. Grinberg, Warszawa 1998.
+Wacinkiewicz D., Zaspokajanie potrzeb wspólnot samorządowych. Studium administracyjnopraw-
+ne, Warszawa 2016.
+Wacinkiewicz D., Horizontal dimension of subsidiarity in the activity of Polish local government,
+Granada 2020.Prawo 333, 2021
+© for this edition by CNS
+476 DANIEL WACINKIEWICZ
+Horizontal Dimension of Subsidiarity: Comments
+in the Context of Tadeusz Bigo’s Concept
+of Decentralization and Local Government
+Summary
+A look at the subject matter of the subsidiarity principle through the prism of the research
+conducted by Professor Bigo on public law relationships as well as its results excellently expresses
+the coupling that occurs between the decentralisation and subsidiarity principles. These principles
+complement each other perfectly, pointing to a specific manner of exercising authority — based on
+the understanding of the public role citizens and institutions created by them may and should play in
+public life; authority which is able to share public tasks with private entities (citizens, their group-
+ings or organizations established by them) and supports initiatives.
+Now, apart from the vertical set-up, the horizontal dimension of the subsidiarity principle is
+attributed with increasing importance. Its essence is to ensure such a way of performing public tasks
+that they are implemented to the greatest degree possible by civil society measures. Public author-
+ities, including local government units, act in such a model as intermediaries between the citizens
+and the state. This means that a certain “division of labour” between the public and civil sectors
+must be created.
+Keywords: subsidiarity, horizontal subsidiarity, decentralization, local government.Prawo 333, 2021
+© for this edition by CNS

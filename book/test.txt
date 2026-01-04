@@ -1,0 +1,1 @@
+To jest testowy tekst do treningu LSTM. Możesz tu dodać więcej zdań.
