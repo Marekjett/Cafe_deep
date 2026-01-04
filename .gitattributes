@@ -2,3 +2,6 @@ datas/* filter=lfs diff=lfs merge=lfs -text
 data/* filter=lfs diff=lfs merge=lfs -text
 *.model filter=lfs diff=lfs merge=lfs -text
 *.dat filter=lfs diff=lfs merge=lfs -text
+backups/* filter=lfs diff=lfs merge=lfs -text
+book_backup/* filter=lfs diff=lfs merge=lfs -text
+books/* filter=lfs diff=lfs merge=lfs -text
