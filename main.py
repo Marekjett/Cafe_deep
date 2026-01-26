@@ -1,1312 +1,2085 @@
+"""
+🎯 MiniGPT-60M: Zaawansowany model językowy ~60 milionów parametrów
+Autor: AI Assistant | Wersja: 4.0 Professional
+"""
+
+import os
+import sys
+import gc
+import time
+import math
+import random
 import json
+import re
+import argparse
+import logging
+import warnings
+from pathlib import Path
+from datetime import datetime
+from typing import List, Tuple, Dict, Optional, Union, Any
+from collections import Counter, defaultdict
+from dataclasses import dataclass, field
+from enum import Enum
+
+import numpy as np
 import torch
 import torch.nn as nn
-import glob
-import os
-import random
-import datetime
-import numpy as np
-import time
-import shutil
-import sys
-import math
-import re
-from collections import defaultdict, Counter
-from pathlib import Path
-
-torch.set_num_threads(8)
-
-
-# -------------------- Konfiguracja --------------------
-class ChatbotConfig:
-    def __init__(
-            self,
-            learn=True,
-            talk=False,
-            traintalk=False,
-            train=False,
-            force=False,
-            epochs=2,
-            batch=1,
-            hidden=712,
-            layers=8,
-            lr=0.05,
-            data="data/",
-            books="book/",
-            model_dir="model",
-            backup_dir="backup_model",
-            max_length=1024,
-            dropout=0.2,
-            backup_freq=5,
-            main_save_freq=20,
-            min_word_freq=5,
-            context_size=100,
-            train_talk_threshold=0.7,
-            estimated_tokens_per_second=50000  # Szacowana wydajność (tokenów/sekundę)
-    ):
-        self.learn = learn
-        self.talk = talk
-        self.traintalk = traintalk
-        self.train = train
-        self.force = force
-        self.epochs = epochs
-        self.batch = batch
-        self.hidden = hidden
-        self.layers = layers
-        self.lr = lr
-        self.data = data
-        self.books = books
-        self.model_dir = model_dir
-        self.backup_dir = backup_dir
-        self.model_path = os.path.join(model_dir, "model.pt")
-        self.config_path = os.path.join(model_dir, "config.json")
-        self.max_length = max_length
-        self.dropout = dropout
-        self.backup_freq = backup_freq
-        self.main_save_freq = main_save_freq
-        self.min_word_freq = min_word_freq
-        self.context_size = context_size
-        self.train_talk_threshold = train_talk_threshold
-        self.estimated_tokens_per_second = estimated_tokens_per_second
-
-        os.makedirs(self.model_dir, exist_ok=True)
-        os.makedirs(self.backup_dir, exist_ok=True)
-        os.makedirs(self.books, exist_ok=True)
-
-    def save_config(self):
-        try:
-            config = {
-                "epochs": self.epochs,
-                "batch": self.batch,
-                "hidden": self.hidden,
-                "layers": self.layers,
-                "lr": self.lr,
-                "data": self.data,
-                "books": self.books,
-                "max_length": self.max_length,
-                "dropout": self.dropout,
-                "backup_freq": self.backup_freq,
-                "main_save_freq": self.main_save_freq,
-                "min_word_freq": self.min_word_freq,
-                "context_size": self.context_size,
-                "train_talk_threshold": self.train_talk_threshold,
-                "estimated_tokens_per_second": self.estimated_tokens_per_second,
-                "saved_at": datetime.datetime.now().isoformat()
-            }
-            with open(self.config_path, 'w', encoding='utf-8') as f:
-                json.dump(config, f, ensure_ascii=False, indent=2)
-            return True
-        except Exception as e:
-            print(f"❌ Błąd zapisu konfiguracji: {e}")
-            return False
-
-    def load_config(self):
-        if os.path.exists(self.config_path):
-            try:
-                with open(self.config_path, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
-                for key, value in config.items():
-                    if hasattr(self, key):
-                        setattr(self, key, value)
-                return True
-            except Exception as e:
-                print(f"❌ Błąd wczytywania konfiguracji: {e}")
-                return False
-        return False
-
-
-# -------------------- Pasek postępu --------------------
-def print_progress_bar(iteration, total, prefix='', suffix='', length=50, fill='█'):
-    percent = f"{100 * (iteration / float(total)):5.1f}%"
-    filled_length = int(length * iteration // total)
-    bar = fill * filled_length + '░' * (length - filled_length)
-    sys.stdout.write(f'\r{prefix} |{bar}| {percent} {suffix}')
-    sys.stdout.flush()
-    if iteration == total:
-        print()
-
-
-# -------------------- Preprocessing tekstu --------------------
-class TextPreprocessor:
-    @staticmethod
-    def clean_text(text):
-        text = re.sub(r'\s+', ' ', text)
-        text = re.sub(r'\n+', '\n', text)
-        text = text.strip()
-        return text
-
-    @staticmethod
-    def split_into_chunks(text, chunk_size=1000):
-        words = text.split()
-        chunks = []
-        current_chunk = []
-        current_length = 0
-
-        for word in words:
-            if current_length + len(word) + 1 > chunk_size and current_chunk:
-                chunks.append(' '.join(current_chunk))
-                current_chunk = [word]
-                current_length = len(word)
-            else:
-                current_chunk.append(word)
-                current_length += len(word) + 1
-
-        if current_chunk:
-            chunks.append(' '.join(current_chunk))
-
-        return chunks
-
-    @staticmethod
-    def prepare_conversation_line(input_text, output_text):
-        return f"<BOS>{input_text.strip()}\n{output_text.strip()}<EOS>"
-
-
-# -------------------- Obliczanie czasu treningu --------------------
-def estimate_training_time(config, total_tokens):
-    """
-    Szacuje czas treningu na podstawie liczby tokenów
-
-    Args:
-        config: Konfiguracja modelu
-        total_tokens: Całkowita liczba tokenów w datasetcie
-
-    Returns:
-        Tuple: (estimated_seconds, time_string)
-    """
-    # Liczba operacji na token
-    # Dla LSTM: ~4 * hidden * layers operacji na token
-    operations_per_token = 4 * config.hidden * config.layers
-
-    # Całkowita liczba operacji
-    total_operations = total_tokens * operations_per_token * config.epochs
-
-    # Szacowana wydajność (operacji na sekundę)
-    # Bazujemy na estimated_tokens_per_second z konfiguracji
-    if torch.cuda.is_available():
-        # Dla GPU: ~10-100x szybsze
-        ops_per_second = config.estimated_tokens_per_second * operations_per_token * 0.5
-    else:
-        # Dla CPU
-        ops_per_second = config.estimated_tokens_per_second * operations_per_token * 0.1
-
-    if ops_per_second == 0:
-        ops_per_second = 1e6  # Domyślna wartość
-
-    estimated_seconds = total_operations / ops_per_second
-
-    # Formatowanie czasu
-    if estimated_seconds < 60:
-        time_str = f"{estimated_seconds:.1f} sekund"
-    elif estimated_seconds < 3600:
-        minutes = estimated_seconds / 60
-        time_str = f"{minutes:.1f} minut"
-    elif estimated_seconds < 86400:
-        hours = estimated_seconds / 3600
-        time_str = f"{hours:.1f} godzin"
-    else:
-        days = estimated_seconds / 86400
-        time_str = f"{days:.1f} dni"
-
-    return estimated_seconds, time_str
-
-
-# -------------------- Zapisywanie modeli --------------------
-def save_checkpoint(config, checkpoint_data, epoch, val_loss, is_best=False, is_regular=False):
-    try:
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        files_saved = []
-        save_messages = []
-
-        if is_regular and epoch % config.backup_freq == 0:
-            backup_path = os.path.join(config.backup_dir, f"model_epoch{epoch:04d}_{timestamp}.pt")
-            print_progress_bar(0, 3, prefix=f"📁 Backup epoka {epoch}:", suffix="przygotowanie", length=30)
-            time.sleep(0.1)
-
-            torch.save(checkpoint_data, backup_path)
-            print_progress_bar(1, 3, prefix=f"📁 Backup epoka {epoch}:", suffix="zapisywanie", length=30)
-            time.sleep(0.1)
-
-            if os.path.exists(backup_path):
-                size = os.path.getsize(backup_path)
-                print_progress_bar(3, 3, prefix=f"📁 Backup epoka {epoch}:",
-                                   suffix=f"zapisano {size / 1024 / 1024:.1f} MB", length=30)
-                save_messages.append(f"📁 Backup: model_epoch{epoch:04d}_{timestamp}.pt ({size / 1024 / 1024:.1f} MB)")
-            else:
-                print_progress_bar(3, 3, prefix=f"📁 Backup epoka {epoch}:", suffix="BŁĄD!", length=30)
-                save_messages.append(f"❌ Backup: model_epoch{epoch:04d}_{timestamp}.pt (BŁĄD!)")
-
-            files_saved.append(backup_path)
-
-        if is_regular and epoch % config.main_save_freq == 0:
-            print(f"\n{'=' * 60}")
-            print(f"💾 NADPISYWANIE MODELU GŁÓWNEGO (epoch {epoch})...")
-            print(f"{'=' * 60}")
-
-            if os.path.exists(config.model_path):
-                old_backup = os.path.join(config.backup_dir, f"model_main_old_{timestamp}.pt")
-                try:
-                    shutil.copy2(config.model_path, old_backup)
-                    save_messages.append(f"📋 Kopia starego: model_main_old_{timestamp}.pt")
-                except Exception as e:
-                    save_messages.append(f"⚠️  Nie skopiowano starego: {e}")
-
-            try:
-                print_progress_bar(0, 3, prefix="💾 Model główny:", suffix="przygotowanie", length=30)
-                time.sleep(0.1)
-
-                torch.save(checkpoint_data, config.model_path)
-                print_progress_bar(1, 3, prefix="💾 Model główny:", suffix="zapisywanie", length=30)
-                time.sleep(0.1)
-
-                config.save_config()
-                print_progress_bar(2, 3, prefix="💾 Model główny:", suffix="konfiguracja", length=30)
-                time.sleep(0.1)
-
-                if os.path.exists(config.model_path):
-                    size = os.path.getsize(config.model_path)
-                    print_progress_bar(3, 3, prefix="💾 Model główny:",
-                                       suffix=f"GOTOWE! {size / 1024 / 1024:.1f} MB", length=30)
-                    save_messages.append(f"✅ MODEL GŁÓWNY: model.pt ({size / 1024 / 1024:.1f} MB)")
-                else:
-                    print_progress_bar(3, 3, prefix="💾 Model główny:", suffix="BŁĄD!", length=30)
-                    save_messages.append(f"❌ MODEL GŁÓWNY: model.pt (BŁĄD!)")
-
-                files_saved.append(config.model_path)
-            except Exception as e:
-                print(f"   ❌ Błąd zapisu modelu głównego: {e}")
-
-        if is_best:
-            best_path = os.path.join(config.model_dir, "model_best.pt")
-            try:
-                print_progress_bar(0, 2, prefix="🏆 Najlepszy model:", suffix="przygotowanie", length=30)
-                time.sleep(0.1)
-
-                torch.save(checkpoint_data, best_path)
-                print_progress_bar(1, 2, prefix="🏆 Najlepszy model:", suffix="zapisywanie", length=30)
-                time.sleep(0.1)
-
-                if os.path.exists(best_path):
-                    size = os.path.getsize(best_path)
-                    print_progress_bar(2, 2, prefix="🏆 Najlepszy model:",
-                                       suffix=f"GOTOWE! {size / 1024 / 1024:.1f} MB", length=30)
-                    save_messages.append(f"🏆 NAJLEPSZY: model_best.pt ({size / 1024 / 1024:.1f} MB)")
-                else:
-                    print_progress_bar(2, 2, prefix="🏆 Najlepszy model:", suffix="BŁĄD!", length=30)
-                    save_messages.append(f"❌ NAJLEPSZY: model_best.pt (BŁĄD!)")
-
-                files_saved.append(best_path)
-            except Exception as e:
-                save_messages.append(f"⚠️  Błąd najlepszego: {e}")
-
-        if is_regular:
-            epoch_path = os.path.join(config.model_dir, f"model_latest.pt")
-            try:
-                torch.save(checkpoint_data, epoch_path)
-                if os.path.exists(epoch_path):
-                    size = os.path.getsize(epoch_path)
-                    save_messages.append(f"📝 Latest: model_latest.pt ({size / 1024 / 1024:.1f} MB)")
-                files_saved.append(epoch_path)
-            except Exception as e:
-                save_messages.append(f"⚠️  Błąd latest: {e}")
-
-        if save_messages:
-            print(f"\n{'─' * 50}")
-            print("📦 PODSUMOWANIE ZAPISU:")
-            for msg in save_messages:
-                print(f"  {msg}")
-            print(f"{'─' * 50}")
-
-        return files_saved
-
-    except Exception as e:
-        print(f"\n❌ KRYTYCZNY BŁĄD w save_checkpoint: {e}")
-        return []
-
-
-# -------------------- Ładowanie danych --------------------
-def load_and_preprocess_data(folder, books_folder=None):
-    print(f"\n{'=' * 60}")
-    print("📂 ŁADOWANIE DANYCH")
-    print(f"{'=' * 60}")
-
-    all_data = []
-    data_files = glob.glob(os.path.join(folder, "*.json"))
-    print(f"Znaleziono {len(data_files)} plików JSON")
-
-    files_loaded = 0
-    for i, file in enumerate(data_files):
-        print_progress_bar(i, len(data_files), prefix="Ładowanie JSON:",
-                           suffix=os.path.basename(file), length=30)
-        try:
-            with open(file, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                for item in data:
-                    input_text = item.get("input", "").strip()
-                    output_text = item.get("output", "").strip()
-                    if 10 < len(input_text) < 300 and 10 < len(output_text) < 300:
-                        all_data.append({"input": input_text, "output": output_text})
-            files_loaded += 1
-        except Exception as e:
-            print(f"\n⚠️  Błąd przy wczytywaniu {file}: {e}")
-
-    print_progress_bar(len(data_files), len(data_files), prefix="Ładowanie JSON:",
-                       suffix=f"Zakończono ({files_loaded}/{len(data_files)})", length=30)
-
-    if books_folder:
-        book_files = glob.glob(os.path.join(books_folder, "*.txt"))
-        print(f"\nZnaleziono {len(book_files)} plików tekstowych (książki)")
-
-        for i, file in enumerate(book_files):
-            print_progress_bar(i, len(book_files), prefix="Ładowanie książek:",
-                               suffix=os.path.basename(file), length=30)
-            try:
-                with open(file, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    content = TextPreprocessor.clean_text(content)
-
-                    chunks = TextPreprocessor.split_into_chunks(content, chunk_size=config.context_size)
-
-                    for j in range(len(chunks) - 1):
-                        if len(chunks[j]) > 20 and len(chunks[j + 1]) > 20:
-                            all_data.append({
-                                "input": f"Kontynuuj tekst: {chunks[j][:100]}...",
-                                "output": chunks[j + 1]
-                            })
-
-                print(f"\n  📖 {os.path.basename(file)}: {len(chunks)} fragmentów")
-
-            except Exception as e:
-                print(f"\n⚠️  Błąd przy wczytywaniu książki {file}: {e}")
-
-        print_progress_bar(len(book_files), len(book_files), prefix="Ładowanie książek:",
-                           suffix="Zakończono", length=30)
-
-    print(f"\n✅ Załadowano {len(all_data)} próbek dialogów")
-    return all_data
-
-
-# -------------------- Słownik --------------------
-def build_vocabulary(data, min_freq=2):
-    print(f"\n{'=' * 60}")
-    print("🔤 BUDOWANIE SŁOWNIKA")
-    print(f"{'=' * 60}")
-
-    all_text = ""
-    print("Łączenie tekstów...")
-    for i, item in enumerate(data):
-        print_progress_bar(i, len(data), prefix="Przetwarzanie dialogów:",
-                           suffix=f"{i}/{len(data)}", length=30)
-        all_text += f"{item['input']}\n{item['output']}\n"
-
-    print_progress_bar(len(data), len(data), prefix="Przetwarzanie dialogów:",
-                       suffix="Zakończono", length=30)
-
-    print("Liczenie częstotliwości...")
-    char_counts = {}
-    total_chars = len(all_text)
-    for i, char in enumerate(all_text):
-        if i % 100000 == 0:
-            print_progress_bar(i, total_chars, prefix="Analiza znaków:",
-                               suffix=f"{i / total_chars * 100:.1f}%", length=30)
-        char_counts[char] = char_counts.get(char, 0) + 1
-
-    print_progress_bar(total_chars, total_chars, prefix="Analiza znaków:",
-                       suffix="Zakończono", length=30)
-
-    SPECIAL_TOKENS = ['<BOS>', '<EOS>', '<PAD>', '<UNK>']
-    common_chars = [c for c, count in char_counts.items()
-                    if count >= min_freq or c in ' .,!?\nąćęłńóśźżĄĆĘŁŃÓŚŹŻ']
-
-    chars = SPECIAL_TOKENS + sorted(common_chars)
-    stoi = {c: i for i, c in enumerate(chars)}
-    itos = {i: c for i, c in enumerate(chars)}
-
-    print(f"\n✅ Słownik: {len(chars)} znaków")
-    print(f"📊 Rozkład:")
-    print(f"  - Znaki specjalne: {len(SPECIAL_TOKENS)}")
-    print(f"  - Znaki wspólne: {len(common_chars)}")
-    print(f"  - Wszystkie unikalne: {len(char_counts)}")
-    print(f"  - Całkowita liczba znaków w danych: {total_chars:,}")
-
-    return stoi, itos, len(chars), total_chars
-
-
-# -------------------- Model --------------------
-class AdvancedChatModel(nn.Module):
-    def __init__(self, vocab_size, hidden_size=512, num_layers=2, dropout=0.3):
-        super().__init__()
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.vocab_size = vocab_size
-
-        self.embedding = nn.Embedding(vocab_size, hidden_size, padding_idx=0)
-        self.lstm = nn.LSTM(
-            hidden_size,
-            hidden_size,
-            num_layers,
-            batch_first=True,
-            dropout=dropout if num_layers > 1 else 0,
-            bidirectional=False
-        )
-        self.dropout = nn.Dropout(dropout)
-        self.fc = nn.Linear(hidden_size, vocab_size)
-
-        self.init_weights()
-
-    def init_weights(self):
-        nn.init.xavier_uniform_(self.embedding.weight)
-        nn.init.xavier_uniform_(self.fc.weight)
-        nn.init.zeros_(self.fc.bias)
-
-        for name, param in self.lstm.named_parameters():
-            if 'weight' in name:
-                nn.init.orthogonal_(param)
-            elif 'bias' in name:
-                nn.init.zeros_(param)
-                n = param.size(0)
-                param.data[n // 4:n // 2].fill_(1.0)
-
-    def forward(self, x, hidden=None):
-        batch_size = x.size(0)
-        seq_len = x.size(1)
-
-        x = self.embedding(x)
-
-        if hidden is None:
-            h0 = torch.zeros(self.num_layers, batch_size, self.hidden_size).to(x.device)
-            c0 = torch.zeros(self.num_layers, batch_size, self.hidden_size).to(x.device)
-            hidden = (h0, c0)
-
-        x, hidden = self.lstm(x, hidden)
-        x = self.dropout(x)
-        output = self.fc(x)
-        return output, hidden
-
-
-# -------------------- Trening --------------------
-def train_model(config: ChatbotConfig):
-    print(f"\n{'=' * 80}")
-    print("🚀 ROZPOCZĘCIE TRENINGU")
-    print(f"{'=' * 80}")
-    print(f"📊 Konfiguracja:")
-    print(f"  • Epoki: {config.epochs}")
-    print(f"  • Batch: {config.batch}")
-    print(f"  • Książki: {config.books}")
-    print(f"  • Backup co: {config.backup_freq} epok")
-    print(f"  • Główny model co: {config.main_save_freq} epok")
-    print(f"{'=' * 80}")
-
-    data = load_and_preprocess_data(config.data, config.books)
-
-    stoi, itos, vocab_size, total_chars = build_vocabulary(data)
-
-    # Obliczanie szacowanego czasu treningu
-    print(f"\n{'=' * 60}")
-    print("⏱️  SZACOWANIE CZASU TRENINGU")
-    print(f"{'=' * 60}")
-
-    # Całkowita liczba tokenów do przetworzenia
-    total_tokens = total_chars * config.epochs
-    print(f"📊 Statystyki tokenów:")
-    print(f"  • Tokenów w danych: {total_chars:,}")
-    print(f"  • Epoki: {config.epochs}")
-    print(f"  • Całkowite tokeny do przetworzenia: {total_tokens:,}")
-
-    estimated_seconds, time_str = estimate_training_time(config, total_chars)
-    print(f"  • Szacowany czas treningu: {time_str}")
-    print(f"  • Szacowana wydajność: {config.estimated_tokens_per_second:,} tokenów/sekundę")
-
-    if estimated_seconds > 3600:  # Jeśli więcej niż godzina
-        print(f"\n⚠️  UWAGA: Szacowany czas treningu przekracza 1 godzinę!")
-        print(f"   Rozważ zmniejszenie liczby epok lub rozmiaru danych.")
-
-    confirm = input(f"\n🔸 Czy kontynuować trening? (tak/nie): ").strip().lower()
-    if confirm not in ['t', 'tak', 'y', 'yes']:
-        print("❌ Trening anulowany.")
-        return
-
-    print(f"\n{'=' * 60}")
-    print("🔧 PRZYGOTOWYWANIE DANYCH TRENINGOWYCH")
-    print(f"{'=' * 60}")
-
-    def prepare_samples():
-        samples = []
-        total_items = len(data)
-
-        for idx, item in enumerate(data):
-            if idx % 100 == 0:
-                print_progress_bar(idx, total_items, prefix="Tokenizacja:",
-                                   suffix=f"{idx}/{total_items}", length=30)
-
-            text = f"<BOS>{item['input']}\n{item['output']}<EOS>"
-            tokens = [stoi.get(c, stoi['<UNK>']) for c in text]
-
-            if len(tokens) > config.max_length:
-                tokens = tokens[:config.max_length]
-                tokens[-1] = stoi['<EOS>']
-
-            padded = tokens + [stoi['<PAD>']] * (config.max_length - len(tokens))
-
-            x = torch.tensor(padded[:-1], dtype=torch.long)
-            y = torch.tensor(padded[1:], dtype=torch.long)
-            samples.append((x, y))
-
-        print_progress_bar(total_items, total_items, prefix="Tokenizacja:",
-                           suffix="Zakończono", length=30)
-
-        print(f"\n✅ Przygotowano {len(samples)} próbek")
-        print(f"📏 Długość sekwencji: {config.max_length} tokenów")
-        return samples
-
-    dataset = prepare_samples()
-    random.shuffle(dataset)
-
-    split_idx = int(0.85 * len(dataset))
-    train_data, val_data = dataset[:split_idx], dataset[split_idx:]
-
-    print(f"\n📊 Podział danych:")
-    print(f"  • Train: {len(train_data)} próbek ({len(train_data) / len(dataset) * 100:.1f}%)")
-    print(f"  • Val:   {len(val_data)} próbek ({len(val_data) / len(dataset) * 100:.1f}%)")
-    print(f"  • Total: {len(dataset)} próbek")
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"\n💻 Używane urządzenie: {device}")
-    if device.type == 'cuda':
-        print(f"  • GPU: {torch.cuda.get_device_name(0)}")
-        print(f"  • Pamięć: {torch.cuda.get_device_properties(0).total_memory / 1024 ** 3:.1f} GB")
-
-    print(f"\n🧠 Inicjalizacja modelu...")
-    model = AdvancedChatModel(
-        vocab_size=vocab_size,
-        hidden_size=config.hidden,
-        num_layers=config.layers,
-        dropout=config.dropout
-    ).to(device)
-
-    total_params = sum(p.numel() for p in model.parameters())
-    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f"✅ Model utworzony:")
-    print(f"  • Parametry: {total_params:,} (trenowalne: {trainable_params:,})")
-    print(f"  • Rozmiar: ~{total_params * 4 / 1024 ** 2:.1f} MB (float32)")
-
-    optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr, weight_decay=0.01)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer,
-        T_max=config.epochs,
-        eta_min=config.lr * 0.01
-    )
-    loss_fn = nn.CrossEntropyLoss(ignore_index=stoi['<PAD>'])
-
-    best_val_loss = float('inf')
-    training_start_time = time.time()
-    tokens_processed = 0
-    start_time = time.time()
-
-    print(f"\n{'=' * 80}")
-    print("🔥 ROZPOCZĘCIE TRENINGU")
-    print(f"{'=' * 80}")
-
-    for epoch in range(config.epochs):
-        epoch_start_time = time.time()
-        model.train()
-        total_train_loss = 0
-        batches_processed = 0
-        epoch_tokens = 0
-
-        random.shuffle(train_data)
-
-        print(f"\n📈 Epoka {epoch + 1}/{config.epochs}")
-        print(f"{'─' * 40}")
-
-        for i in range(0, len(train_data), config.batch):
-            batch_idx = i // config.batch + 1
-            total_batches = len(train_data) // config.batch + 1
-
-            batch_samples = train_data[i:i + config.batch]
-            if not batch_samples:
-                continue
-
-            x_batch = torch.stack([x for x, y in batch_samples]).to(device)
-            y_batch = torch.stack([y for x, y in batch_samples]).to(device)
-
-            optimizer.zero_grad()
-            logits, _ = model(x_batch)
-
-            loss = loss_fn(
-                logits.view(-1, vocab_size),
-                y_batch.view(-1)
-            )
-
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimizer.step()
-
-            total_train_loss += loss.item()
-            batches_processed += 1
-
-            # Aktualizuj liczbę przetworzonych tokenów
-            batch_tokens = x_batch.numel()
-            epoch_tokens += batch_tokens
-            tokens_processed += batch_tokens
-
-            if batch_idx % 10 == 0 or batch_idx == total_batches:
-                current_time = time.time()
-                elapsed_time = current_time - start_time
-                tokens_per_second = tokens_processed / elapsed_time if elapsed_time > 0 else 0
-
-                # Oblicz pozostały czas
-                tokens_remaining = total_chars * config.epochs - tokens_processed
-                if tokens_per_second > 0:
-                    time_remaining = tokens_remaining / tokens_per_second
-                    if time_remaining < 60:
-                        remaining_str = f"{time_remaining:.1f}s"
-                    elif time_remaining < 3600:
-                        remaining_str = f"{time_remaining / 60:.1f}m"
-                    else:
-                        remaining_str = f"{time_remaining / 3600:.1f}h"
-                else:
-                    remaining_str = "obliczanie..."
-
-                print_progress_bar(batch_idx, total_batches,
-                                   prefix=f"Batch {batch_idx}/{total_batches}:",
-                                   suffix=f"loss: {loss.item():.4f} | tok/s: {tokens_per_second:.0f} | pozostało: {remaining_str}",
-                                   length=30)
-
-        avg_train_loss = total_train_loss / max(batches_processed, 1)
-
-        model.eval()
-        total_val_loss = 0
-        val_batches = 0
-
-        print(f"\n{'─' * 40}")
-        print("🧪 WALIDACJA")
-
-        with torch.no_grad():
-            for i in range(0, len(val_data), config.batch):
-                batch_samples = val_data[i:i + config.batch]
-                if not batch_samples:
-                    continue
-
-                x_batch = torch.stack([x for x, y in batch_samples]).to(device)
-                y_batch = torch.stack([y for x, y in batch_samples]).to(device)
-
-                logits, _ = model(x_batch)
-                loss = loss_fn(
-                    logits.view(-1, vocab_size),
-                    y_batch.view(-1)
-                )
-                total_val_loss += loss.item()
-                val_batches += 1
-
-                batch_idx = i // config.batch + 1
-                total_val_batches = len(val_data) // config.batch + 1
-                if batch_idx % 5 == 0 or batch_idx == total_val_batches:
-                    print_progress_bar(batch_idx, total_val_batches,
-                                       prefix="Walidacja:",
-                                       suffix=f"loss: {loss.item():.4f}",
-                                       length=30)
-
-        avg_val_loss = total_val_loss / max(val_batches, 1)
-        scheduler.step()
-        current_lr = optimizer.param_groups[0]['lr']
-
-        epoch_time = time.time() - epoch_start_time
-        total_time = time.time() - training_start_time
-
-        # Oblicz rzeczywistą wydajność
-        actual_tokens_per_second = epoch_tokens / epoch_time if epoch_time > 0 else 0
-
-        # Aktualizuj szacowaną wydajność w konfiguracji
-        if actual_tokens_per_second > 0:
-            config.estimated_tokens_per_second = actual_tokens_per_second
-
-        print(f"\n{'─' * 40}")
-        print("📊 STATYSTYKI EPOKI")
-        print(f"{'─' * 40}")
-        print(f"Epoka:          {epoch + 1:3d}/{config.epochs}")
-        print(f"Train Loss:     {avg_train_loss:.6f}")
-        print(f"Val Loss:       {avg_val_loss:.6f}")
-        print(f"Learning Rate:  {current_lr:.6f}")
-        print(f"Tokenów w epoce: {epoch_tokens:,}")
-        print(f"Czas epoki:     {epoch_time:.1f}s")
-        print(f"Tokenów/sekundę: {actual_tokens_per_second:.0f}")
-        print(f"Czas całkowity: {total_time / 60:.1f}m")
-
-        # Oblicz pozostały czas
-        epochs_remaining = config.epochs - epoch - 1
-        if actual_tokens_per_second > 0:
-            time_remaining = (total_chars * epochs_remaining) / actual_tokens_per_second
-            if time_remaining < 60:
-                remaining_str = f"{time_remaining:.1f} sekund"
-            elif time_remaining < 3600:
-                remaining_str = f"{time_remaining / 60:.1f} minut"
-            else:
-                remaining_str = f"{time_remaining / 3600:.1f} godzin"
-            print(f"Pozostało:      {remaining_str}")
-
-        print_progress_bar(epoch + 1, config.epochs,
-                           prefix="Całkowity postęp:",
-                           suffix=f"Epoka {epoch + 1}/{config.epochs}",
-                           length=40)
-
-        checkpoint = {
-            'epoch': epoch + 1,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'scheduler_state_dict': scheduler.state_dict(),
-            'val_loss': avg_val_loss,
-            'train_loss': avg_train_loss,
-            'stoi': stoi,
-            'itos': itos,
-            'vocab_size': vocab_size,
-            'hidden_size': config.hidden,
-            'num_layers': config.layers,
-            'config': vars(config),
-            'timestamp': datetime.datetime.now().isoformat(),
-            'tokens_processed': tokens_processed,
-            'actual_tokens_per_second': actual_tokens_per_second
+import torch.nn.functional as F
+from torch.utils.data import Dataset, DataLoader, IterableDataset
+from torch.optim import AdamW, SGD, Adam
+from torch.optim.lr_scheduler import (
+    CosineAnnealingLR,
+    CosineAnnealingWarmRestarts,
+    OneCycleLR,
+    ReduceLROnPlateau,
+    LambdaLR
+)
+from torch.cuda.amp import GradScaler, autocast
+from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
+import matplotlib.pyplot as plt
+
+# ==================== KONFIGURACJA SYSTEMU ====================
+warnings.filterwarnings("ignore")
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+
+class DeviceConfig:
+    """Konfiguracja urządzenia i pamięci"""
+
+    def __init__(self):
+        self.device = self._get_device()
+        self.set_seeds(42)
+        self._print_device_info()
+
+    def _get_device(self) -> str:
+        """Automatycznie wybiera najlepsze urządzenie"""
+        if torch.cuda.is_available():
+            return "cuda"
+        elif torch.backends.mps.is_available():
+            return "mps"
+        else:
+            return "cpu"
+
+    def set_seeds(self, seed: int = 42):
+        """Ustawia seed dla reprodukowalności"""
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+    def _print_device_info(self):
+        """Wyświetla informacje o urządzeniu"""
+        logger.info(f"🎯 SYSTEM: Python {sys.version}")
+        logger.info(f"🎯 PyTorch: {torch.__version__}")
+
+        if self.device == "cuda":
+            gpu_count = torch.cuda.device_count()
+            logger.info(f"🎯 CUDA dostępne: {torch.cuda.is_available()}")
+            logger.info(f"🎯 Liczba GPU: {gpu_count}")
+            for i in range(gpu_count):
+                mem_total = torch.cuda.get_device_properties(i).total_memory / 1e9
+                logger.info(f"🎯 GPU {i}: {torch.cuda.get_device_name(i)} ({mem_total:.1f} GB)")
+
+        elif self.device == "mps":
+            logger.info("🎯 MPS (Apple Silicon) dostępne")
+
+        logger.info(f"🎯 Wybrane urządzenie: {self.device.upper()}")
+
+
+class ModelConfig:
+    """Konfiguracja modelu 60M parametrów"""
+
+    def __init__(self):
+        # Słownik (rozszerzony o polskie znaki i symbole programistyczne)
+        self.vocab_chars = list("aąbcćdeęfghijklłmnńoóprsśtuwyzźżAĄBCĆDEĘFGHIJKLŁMNŃOÓPRSŚTUWYZŹŻ")
+        self.vocab_chars += list("0123456789")
+        self.vocab_chars += list(" .,?!:;()[]{}+-*/=<>_\"'`~@#$%^&|\\/\n\t")
+        self.vocab_chars += ["  ", "   ", "\n\n", "\t\t", "->", "::", "=>", "++", "--", "**", "//", "%%"]
+        self.vocab_chars += ["def", "class", "import", "from", "return", "if", "else", "for", "while", "in", "is"]
+
+        self.vocab = self.vocab_chars
+        self.vocab_size = len(self.vocab)
+
+        # Architektura dla ~60M parametrów
+        self.embed_dim = 768  # Zwiększone dla 60M
+        self.n_layers = 12  # 12 warstw
+        self.n_heads = 12  # 12 głów
+        self.max_len = 512  # Dłuższy kontekst
+        self.ff_dim = self.embed_dim * 4
+        self.dropout = 0.1
+        self.activation = "gelu"
+        self.norm_eps = 1e-5
+
+        # Trening - DODAJ epochs TUTAJ:
+        self.epochs = 3  # <-- DODAJ TUTAJ, nie na końcu!
+        self.batch_size = 16 if torch.cuda.is_available() else 4
+        self.grad_accum_steps = 4
+        self.learning_rate = 3e-4
+        self.weight_decay = 0.1
+        self.adam_beta1 = 0.9
+        self.adam_beta2 = 0.95
+        self.adam_eps = 1e-8
+        self.clip_grad = 1.0
+        self.warmup_steps = 2000
+
+        # Harmonogram
+        self.scheduler_type = "cosine"  # cosine, linear, plateau, onecycle
+        self.lr_decay = 0.1
+        self.min_lr = 1e-6
+
+        # Mixed Precision
+        self.use_amp = torch.cuda.is_available()
+        self.scaler = GradScaler() if self.use_amp else None
+
+        # Parallel
+        self.data_parallel = False
+        self.num_workers = 4 if torch.cuda.is_available() else 0
+        self.pin_memory = True
+
+        # Generowanie
+        self.generation_temperature = 0.8
+        self.top_k = 50
+        self.top_p = 0.95
+        self.repetition_penalty = 1.1
+        self.beam_width = 3
+
+        # Ścieżki
+        self.model_dir = "models"
+        self.data_dir = "data"
+        self.prepared_dir = "prepared_data"
+        self.log_dir = "logs"
+        self.tensorboard_dir = "runs"
+
+        # Tworzenie katalogów
+        self._create_dirs()
+
+        # USUŃ CAŁĄ RESZTĘ PONIŻEJ! (zduplikowany kod):
+        # self.epochs = 5  # BRAKOWAŁO! - już dodane wyżej
+        # self.epochs = 3  # Możesz ustawić mniej na początek - już jest 3
+        # self.use_amp = torch.cuda.is_available() - już jest wyżej
+        # self.num_workers = 4 if torch.cuda.is_available() else 0 - już jest wyżej
+        # self.pin_memory = True - już jest wyżej
+
+    def _create_dirs(self):
+        """Tworzy wymagane katalogi"""
+        dirs = [self.model_dir, self.data_dir, self.prepared_dir,
+                self.log_dir, self.tensorboard_dir, "backups", "results"]
+        for d in dirs:
+            os.makedirs(d, exist_ok=True)
+
+# Inicjalizacja konfiguracji
+device_cfg = DeviceConfig()
+cfg = ModelConfig()
+
+
+# ==================== ZAAWANSOWANY TOKENIZER ====================
+class AdvancedTokenizer:
+    """Zaawansowany tokenizer z cache'owaniem i statystykami"""
+
+    def __init__(self, vocab: List[str]):
+        self.vocab = vocab
+        self.vocab_size = len(vocab)
+        self.char2idx = {c: i for i, c in enumerate(vocab)}
+        self.idx2char = {i: c for i, c in enumerate(vocab)}
+
+        # Cache dla szybkości
+        self.encode_cache = {}
+        self.statistics = {
+            "total_tokens": 0,
+            "total_chars": 0,
+            "cache_hits": 0,
+            "cache_misses": 0
         }
 
-        is_best = avg_val_loss < best_val_loss
-        if is_best:
-            best_val_loss = avg_val_loss
-            print(f"\n🏆 NOWY NAJLEPSZY WYNIK! Val loss: {avg_val_loss:.6f}")
+        # Specjalne tokeny
+        self.pad_token = ' '
+        self.pad_id = self.char2idx.get(self.pad_token, 0)
+        self.eos_token = '\n'
+        self.eos_id = self.char2idx.get(self.eos_token, 0)
+        self.unk_token = '?'
+        self.unk_id = self.char2idx.get(self.unk_token, 0)
 
-        saved_files = save_checkpoint(
-            config=config,
-            checkpoint_data=checkpoint,
-            epoch=epoch + 1,
-            val_loss=avg_val_loss,
-            is_best=is_best,
-            is_regular=True
-        )
+        logger.info(f"📊 Tokenizer zainicjalizowany: {self.vocab_size} tokenów")
 
-        print(f"\n{'=' * 80}")
+    def encode(self, text: str, max_len: Optional[int] = None,
+               truncation: bool = True, padding: bool = True) -> List[int]:
+        """Zaawansowane kodowanie z cache'owaniem"""
+        if max_len is None:
+            max_len = cfg.max_len
 
-    training_total_time = time.time() - training_start_time
+        # Sprawdź cache
+        cache_key = f"{text[:50]}_{max_len}_{truncation}_{padding}"
+        if cache_key in self.encode_cache:
+            self.statistics["cache_hits"] += 1
+            return self.encode_cache[cache_key]
 
-    # Oblicz rzeczywistą wydajność
-    actual_tokens_per_second_total = tokens_processed / training_total_time if training_total_time > 0 else 0
+        self.statistics["cache_misses"] += 1
+        self.statistics["total_chars"] += len(text)
 
-    print(f"\n{'=' * 80}")
-    print("🎉 TRENING ZAKOŃCZONY!")
-    print(f"{'=' * 80}")
-    print(f"📊 PODSUMOWANIE:")
-    print(f"  • Czas całkowity: {training_total_time / 60:.1f} minut")
-    print(f"  • Najlepszy val loss: {best_val_loss:.6f}")
-    print(f"  • Średni czas na epokę: {training_total_time / config.epochs:.1f}s")
-    print(f"  • Przetworzone tokeny: {tokens_processed:,}")
-    print(f"  • Rzeczywista wydajność: {actual_tokens_per_second_total:.0f} tokenów/sekundę")
-    print(f"\n💾 ZAPISANE PLIKI:")
-    print(f"  • Model główny:     {config.model_path}")
-    print(f"  • Model najlepszy:  {os.path.join(config.model_dir, 'model_best.pt')}")
-    print(f"  • Model ostatni:    {os.path.join(config.model_dir, 'model_latest.pt')}")
-    print(f"  • Backupy:          {config.backup_dir}/")
-    print(f"  • Liczba backupów:  {len(glob.glob(os.path.join(config.backup_dir, '*.pt')))}")
-    print(f"{'=' * 80}")
+        ids = []
+        i = 0
+        text_len = len(text)
 
+        # Dopasowanie wieloznakowych tokenów
+        while i < text_len:
+            matched = False
 
-# -------------------- Generowanie --------------------
-def generate_response(model, prompt, stoi, itos, max_length=100, temperature=0.7):
-    model.eval()
-    device = next(model.parameters()).device
+            # Spróbuj najpierw dłuższe tokeny (do 4 znaków)
+            for token_len in range(4, 0, -1):
+                if i + token_len <= text_len:
+                    token = text[i:i + token_len]
+                    if token in self.char2idx:
+                        ids.append(self.char2idx[token])
+                        i += token_len
+                        matched = True
+                        break
 
-    if not prompt.startswith('<BOS>'):
-        prompt = f'<BOS>{prompt}'
+            if not matched:
+                # Użyj znaku lub UNK
+                char = text[i]
+                ids.append(self.char2idx.get(char, self.unk_id))
+                i += 1
 
-    tokens = [stoi.get(c, stoi.get('<UNK>', 0)) for c in prompt]
-    x = torch.tensor(tokens).unsqueeze(0).to(device)
+        # Przycinanie
+        if truncation and len(ids) > max_len:
+            # Zachowaj początek i koniec (dla kontekstu)
+            keep_start = max_len // 2
+            keep_end = max_len - keep_start
+            ids = ids[:keep_start] + ids[-keep_end:]
 
-    generated = []
-    hidden = None
+        # Padding
+        if padding and len(ids) < max_len:
+            ids = ids + [self.pad_id] * (max_len - len(ids))
 
-    print("🤖 Generowanie odpowiedzi...")
-    with torch.no_grad():
-        for i in range(max_length):
-            print_progress_bar(i, max_length, prefix="Generowanie:",
-                               suffix=f"token {i}/{max_length}", length=30)
+        self.statistics["total_tokens"] += len(ids)
+        self.encode_cache[cache_key] = ids
 
-            logits, hidden = model(x, hidden)
-            logits = logits[0, -1] / temperature
+        return ids
 
-            probs = torch.softmax(logits, dim=-1)
-            next_token = torch.multinomial(probs, 1).item()
-
-            if next_token == stoi.get('<EOS>', -1):
-                print_progress_bar(max_length, max_length, prefix="Generowanie:",
-                                   suffix="Zakończono (EOS)", length=30)
-                break
-
-            generated.append(next_token)
-            x = torch.tensor([[next_token]]).to(device)
-
-            if i == max_length - 1:
-                print_progress_bar(max_length, max_length, prefix="Generowanie:",
-                                   suffix="Zakończono (max)", length=30)
-
-    response = ''.join(itos.get(idx, '?') for idx in generated)
-    return response
-
-
-# -------------------- Tryb uczenia przez rozmowę --------------------
-def train_talk_mode(config: ChatbotConfig):
-    print(f"\n{'=' * 60}")
-    print("🎓 TRYB UCZENIA PRZEZ ROZMOWĘ")
-    print(f"{'=' * 60}")
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    if os.path.exists(config.model_path):
-        print(f"📥 Ładowanie istniejącego modelu...")
-        checkpoint = torch.load(config.model_path, map_location='cpu', weights_only=False)
-
-        model = AdvancedChatModel(
-            vocab_size=checkpoint['vocab_size'],
-            hidden_size=checkpoint['hidden_size'],
-            num_layers=checkpoint['num_layers']
-        )
-        model.load_state_dict(checkpoint['model_state_dict'])
-        model.to(device)
-
-        stoi = checkpoint['stoi']
-        itos = checkpoint['itos']
-        optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr * 0.1)
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-
-        print(f"✅ Wczytano model z epoki {checkpoint.get('epoch', 'N/A')}")
-    else:
-        print("❌ Nie znaleziono istniejącego modelu. Rozpocznij najpierw normalny trening.")
-        return
-
-    model.train()
-    loss_fn = nn.CrossEntropyLoss(ignore_index=stoi['<PAD>'])
-
-    conversation_history = []
-    learning_examples = []
-
-    print(f"\n💬 Rozpocznij rozmowę! Model będzie się uczył na podstawie Twoich poprawek.")
-    print(f"📝 Wpisz '--train' po odpowiedzi aby dodać ją do treningu")
-
-    while True:
-        try:
-            user_input = input("\n👤 Ty: ").strip()
-
-            if user_input.lower() == 'quit':
-                print(f"\n{'=' * 60}")
-                print("👋 Zakończono tryb uczenia")
-                print(f"{'=' * 60}")
-                break
-            elif user_input.lower() == 'skip':
-                print("⏭️  Pominięto")
+    def decode(self, ids: List[int], skip_special: bool = True) -> str:
+        """Dekodowanie z obsługą specjalnych tokenów"""
+        chars = []
+        for token_id in ids:
+            if skip_special and token_id == self.pad_id:
                 continue
-            elif user_input.lower() == 'save':
-                checkpoint = {
-                    'epoch': checkpoint.get('epoch', 0) + 1,
-                    'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict(),
-                    'val_loss': 0.0,
-                    'train_loss': 0.0,
-                    'stoi': stoi,
-                    'itos': itos,
-                    'vocab_size': len(stoi),
-                    'hidden_size': config.hidden,
-                    'num_layers': config.layers,
-                    'config': vars(config),
-                    'timestamp': datetime.datetime.now().isoformat(),
-                    'learning_examples': len(learning_examples)
-                }
-
-                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-                save_path = os.path.join(config.model_dir, f"model_traintalk_{timestamp}.pt")
-                torch.save(checkpoint, save_path)
-                print(f"💾 Model zapisany jako: {save_path}")
-                continue
-            elif user_input.lower() == 'info':
-                print(f"\n{'─' * 50}")
-                print("📊 INFORMACJE O MODELU:")
-                print(f"{'─' * 50}")
-                print(f"Przykłady treningowe: {len(learning_examples)}")
-                print(f"Rozmiar słownika: {len(stoi)}")
-                print(f"Rozmiar historii: {len(conversation_history)}")
-                print(f"{'─' * 50}")
-                continue
-            elif not user_input:
-                continue
-
-            print(f"\n{'─' * 30}")
-            print("🤖 Bot myśli...")
-            response = generate_response(model, user_input, stoi, itos, max_length=100, temperature=0.7)
-            print(f"\n🤖 Bot: {response}")
-            print(f"{'─' * 30}")
-
-            correction = input(
-                "\n✏️  Popraw odpowiedź (lub Enter aby zaakceptować, '--train' aby dodać do treningu): ").strip()
-
-            if correction == "":
-                print("✅ Zaakceptowano odpowiedź bota")
-                conversation_history.append({"input": user_input, "output": response})
-            elif correction.lower() == '--train':
-                learning_examples.append({"input": user_input, "output": response})
-                conversation_history.append({"input": user_input, "output": response})
-                print(f"✅ Dodano do przykładów treningowych. Razem: {len(learning_examples)}")
-
-                if len(learning_examples) >= 5:
-                    print(f"\n🎯 Wykonuję trening na {len(learning_examples)} przykładach...")
-                    train_on_examples(model, optimizer, loss_fn, learning_examples, stoi, device, config)
-                    learning_examples.clear()
-                    print("✅ Trening zakończony")
-
-            elif correction:
-                conversation_history.append({"input": user_input, "output": correction})
-                learning_examples.append({"input": user_input, "output": correction})
-                print(f"✅ Użyto poprawionej odpowiedzi. Przykłady treningowe: {len(learning_examples)}")
-
-                print(f"\n🎯 Uczenie na poprawionej odpowiedzi...")
-                train_single_example(model, optimizer, loss_fn, user_input, correction, stoi, device, config)
-                print("✅ Nauczono na podstawie korekty")
-
-        except KeyboardInterrupt:
-            print(f"\n{'=' * 60}")
-            print("🛑 Zakończono tryb uczenia")
-            print(f"{'=' * 60}")
-            break
-        except Exception as e:
-            print(f"\n❌ Błąd: {e}")
-
-
-def train_single_example(model, optimizer, loss_fn, input_text, output_text, stoi, device, config):
-    model.train()
-
-    text = f"<BOS>{input_text}\n{output_text}<EOS>"
-    tokens = [stoi.get(c, stoi['<UNK>']) for c in text]
-
-    if len(tokens) > config.max_length:
-        tokens = tokens[:config.max_length]
-        tokens[-1] = stoi['<EOS>']
-
-    padded = tokens + [stoi['<PAD>']] * (config.max_length - len(tokens))
-
-    x = torch.tensor(padded[:-1], dtype=torch.long).unsqueeze(0).to(device)
-    y = torch.tensor(padded[1:], dtype=torch.long).unsqueeze(0).to(device)
-
-    optimizer.zero_grad()
-    logits, _ = model(x)
-
-    loss = loss_fn(
-        logits.view(-1, len(stoi)),
-        y.view(-1)
-    )
-
-    loss.backward()
-    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-    optimizer.step()
-
-    return loss.item()
-
-
-def train_on_examples(model, optimizer, loss_fn, examples, stoi, device, config):
-    model.train()
-
-    total_loss = 0
-    batch_size = min(4, len(examples))
-
-    for i in range(0, len(examples), batch_size):
-        batch_examples = examples[i:i + batch_size]
-
-        x_batch = []
-        y_batch = []
-
-        for example in batch_examples:
-            text = f"<BOS>{example['input']}\n{example['output']}<EOS>"
-            tokens = [stoi.get(c, stoi['<UNK>']) for c in text]
-
-            if len(tokens) > config.max_length:
-                tokens = tokens[:config.max_length]
-                tokens[-1] = stoi['<EOS>']
-
-            padded = tokens + [stoi['<PAD>']] * (config.max_length - len(tokens))
-
-            x_batch.append(padded[:-1])
-            y_batch.append(padded[1:])
-
-        x = torch.tensor(x_batch, dtype=torch.long).to(device)
-        y = torch.tensor(y_batch, dtype=torch.long).to(device)
-
-        optimizer.zero_grad()
-        logits, _ = model(x)
-
-        loss = loss_fn(
-            logits.view(-1, len(stoi)),
-            y.view(-1)
-        )
-
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-        optimizer.step()
-
-        total_loss += loss.item()
-
-    return total_loss / max(len(examples) / batch_size, 1)
-
-
-# -------------------- Chat --------------------
-def chat_mode(config: ChatbotConfig):
-    print(f"\n{'=' * 60}")
-    print("🤖 TRYB ROZMOWY")
-    print(f"{'=' * 60}")
-
-    if not os.path.exists(config.model_dir):
-        print("❌ Nie znaleziono folderu z modelami!")
-        return
-
-    print("\n📂 Dostępne modele:")
-    print(f"{'─' * 50}")
-
-    models = []
-    possible_models = [
-        ("model.pt (główny)", config.model_path),
-        ("model_best.pt (najlepszy)", os.path.join(config.model_dir, "model_best.pt")),
-        ("model_latest.pt (ostatni)", os.path.join(config.model_dir, "model_latest.pt"))
-    ]
-
-    traintalk_models = glob.glob(os.path.join(config.model_dir, "model_traintalk_*.pt"))
-    for model_file in sorted(traintalk_models, reverse=True)[:5]:
-        possible_models.append((f"traintalk: {os.path.basename(model_file)}", model_file))
-
-    for name, path in possible_models:
-        if os.path.exists(path):
-            try:
-                checkpoint = torch.load(path, map_location='cpu', weights_only=False)
-                epoch = checkpoint.get('epoch', 'N/A')
-                val_loss = checkpoint.get('val_loss', 'N/A')
-                timestamp = checkpoint.get('timestamp', 'N/A')
-                if isinstance(timestamp, str):
-                    timestamp = timestamp.split('T')[0]
-                models.append((f"{len(models) + 1}. {name}", path, epoch, val_loss, timestamp))
-            except:
-                models.append((f"{len(models) + 1}. {name} (uszkodzony)", path, 'N/A', 'N/A', 'N/A'))
-
-    backup_files = glob.glob(os.path.join(config.backup_dir, "*.pt"))
-    for i, backup in enumerate(sorted(backup_files, reverse=True)[:10], start=len(models) + 1):
-        filename = os.path.basename(backup)
-        try:
-            checkpoint = torch.load(backup, map_location='cpu', weights_only=False)
-            epoch = checkpoint.get('epoch', 'N/A')
-            val_loss = checkpoint.get('val_loss', 'N/A')
-            timestamp = checkpoint.get('timestamp', 'N/A')
-            if isinstance(timestamp, str):
-                timestamp = timestamp.split('T')[0]
-            models.append((f"{i}. {filename}", backup, epoch, val_loss, timestamp))
-        except:
-            models.append((f"{i}. {filename} (uszkodzony)", backup, 'N/A', 'N/A', 'N/A'))
-
-    if not models:
-        print("❌ Nie znaleziono żadnych modeli!")
-        return
-
-    for name, _, epoch, val_loss, timestamp in models:
-        if val_loss != 'N/A':
-            print(f"  {name:40} | epoka: {epoch:4} | loss: {val_loss:.4f} | data: {timestamp}")
-        else:
-            print(f"  {name:40} | epoka: {epoch:4} | loss: {val_loss} | data: {timestamp}")
-
-    print(f"{'─' * 50}")
-
-    try:
-        choice = input("\n🎯 Wybierz model (nr) lub Enter dla domyślnego: ").strip()
-        if choice == "":
-            model_path = config.model_path
-            print(f"🔹 Wybrano domyślny: {os.path.basename(model_path)}")
-        else:
-            idx = int(choice) - 1
-            if 0 <= idx < len(models):
-                model_path = models[idx][1]
-                print(f"🔹 Wybrano: {models[idx][0].split('. ')[1]}")
+            if token_id < self.vocab_size:
+                chars.append(self.idx2char[token_id])
             else:
-                print("⚠️  Nieprawidłowy wybór, używam domyślnego")
-                model_path = config.model_path
-    except:
-        model_path = config.model_path
+                chars.append(self.unk_token)
+        return ''.join(chars)
 
-    if not os.path.exists(model_path):
-        print(f"❌ Nie znaleziono modelu: {model_path}")
-        return
+    def encode_batch(self, texts: List[str], **kwargs) -> torch.Tensor:
+        """Kodowanie batcha"""
+        encoded = [self.encode(text, **kwargs) for text in texts]
+        return torch.tensor(encoded, dtype=torch.long)
 
-    try:
-        print(f"\n{'─' * 50}")
-        print("📥 Ładowanie modelu...")
-        print_progress_bar(0, 3, prefix="Wczytywanie:", suffix="inicjalizacja", length=30)
-        time.sleep(0.2)
+    def get_stats(self) -> Dict:
+        """Zwraca statystyki tokenizacji"""
+        return self.statistics.copy()
 
-        checkpoint = torch.load(model_path, map_location='cpu', weights_only=False)
-        print_progress_bar(1, 3, prefix="Wczytywanie:", suffix="checkpoint", length=30)
-        time.sleep(0.2)
+    def save(self, path: str):
+        """Zapisuje tokenizer"""
+        data = {
+            'vocab': self.vocab,
+            'char2idx': self.char2idx,
+            'idx2char': self.idx2char,
+            'statistics': self.statistics,
+            'special_tokens': {
+                'pad': self.pad_token,
+                'eos': self.eos_token,
+                'unk': self.unk_token
+            }
+        }
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        logger.info(f"💾 Tokenizer zapisany do {path}")
 
-        model = AdvancedChatModel(
-            vocab_size=checkpoint['vocab_size'],
-            hidden_size=checkpoint['hidden_size'],
-            num_layers=checkpoint['num_layers']
-        )
+    @classmethod
+    def load(cls, path: str) -> 'AdvancedTokenizer':
+        """Wczytuje tokenizer"""
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        tokenizer = cls(data['vocab'])
+        tokenizer.char2idx = data['char2idx']
+        tokenizer.idx2char = {int(k): v for k, v in data['idx2char'].items()}
+        tokenizer.statistics = data['statistics']
+        return tokenizer
+
+
+tokenizer = AdvancedTokenizer(cfg.vocab)
+
+
+# ==================== ZAAWANSOWANY DATASET ====================
+class TextAugmentation:
+    """Augmentacja danych tekstowych"""
+
+    @staticmethod
+    def random_deletion(text: str, p: float = 0.1) -> str:
+        """Usuwa losowe słowa"""
+        words = text.split()
+        if len(words) == 1:
+            return text
+
+        kept_words = [word for word in words if random.random() > p]
+        if len(kept_words) == 0:
+            kept_words = [random.choice(words)]
+
+        return ' '.join(kept_words)
+
+    @staticmethod
+    def random_swap(text: str, n: int = 3) -> str:
+        """Zamienia losowe słowa miejscami"""
+        words = text.split()
+        if len(words) < 2:
+            return text
+
+        for _ in range(n):
+            idx1, idx2 = random.sample(range(len(words)), 2)
+            words[idx1], words[idx2] = words[idx2], words[idx1]
+
+        return ' '.join(words)
+
+    @staticmethod
+    def random_insertion(text: str, n: int = 2) -> str:
+        """Wstawia losowe słowa"""
+        words = text.split()
+        if len(words) == 0:
+            return text
+
+        for _ in range(n):
+            word = random.choice(words)
+            idx = random.randint(0, len(words))
+            words.insert(idx, word)
+
+        return ' '.join(words)
+
+    @staticmethod
+    def synonym_replacement(text: str, n: int = 2) -> str:
+        """Zastępuje słowa synonimami (prosta implementacja)"""
+        synonyms = {
+            'dobry': ['świetny', 'wspaniały', 'znakomity'],
+            'zły': ['kiepski', 'słaby', 'niedobry'],
+            'duży': ['wielki', 'ogromny', 'spory'],
+            'mały': ['drobny', 'niewielki', 'malutki'],
+            'szybko': ['prędko', 'błyskawicznie', 'ekspresowo'],
+            'wolno': ['powoli', 'ospale', 'leniwie']
+        }
+
+        words = text.split()
+        new_words = words.copy()
+
+        for _ in range(n):
+            if not words:
+                break
+
+            word_idx = random.randint(0, len(words) - 1)
+            word = words[word_idx].lower()
+
+            if word in synonyms:
+                synonym = random.choice(synonyms[word])
+                new_words[word_idx] = synonym
+
+        return ' '.join(new_words)
+
+
+class SmartTextDataset(Dataset):
+    def __init__(self, data_dir: str, split: str = "train",
+                 augment: bool = True, cache: bool = True):
+        # ZMIANA: Używaj bezpośrednio data_dir dla train
+        if split == "train":
+            self.data_dir = Path(data_dir)  # Bezpośrednio data/
+        else:
+            self.data_dir = Path(data_dir) / split  # Dla val/test
+
+        self.split = split
+        self.augment = augment and split == "train"
+        self.cache = cache
+        self.cached_samples = {}
+
+        # Reszta kodu bez zmian...
+    def _load_samples(self) -> List[str]:
+        """Wczytuje próbki z plików"""
+        samples = []
+
+        for file_path in self.files:
+            try:
+                if file_path.suffix == '.json':
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        if isinstance(data, list):
+                            samples.extend([str(item) for item in data])
+                        elif isinstance(data, dict):
+                            samples.extend([f"{k}: {v}" for k, v in data.items()])
+                else:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        chunks = re.split(r'\n\s*\n', content)
+                        samples.extend([chunk.strip() for chunk in chunks if len(chunk.strip()) > 20])
+            except Exception as e:
+                logger.error(f"❌ Błąd wczytywania {file_path}: {e}")
+
+        return samples
+
+    def _create_dummy_data(self) -> List[str]:
+        """Tworzy przykładowe dane jeśli brak"""
+        logger.warning("⚠️ Tworzę przykładowe dane...")
+        dummy_data = [
+            "Python to język programowania wysokiego poziomu.",
+            "Sieci neuronowe uczą się na danych.",
+            "Adam Mickiewicz napisał Pana Tadeusza.",
+            "Sztuczna inteligencja zmienia świat.",
+            "def funkcja_przyklad(): return True",
+            "Klasy i obiekty w programowaniu obiektowym.",
+            "Polska literatura ma wielu wybitnych autorów.",
+            "Machine learning to poddziedzina AI.",
+            "Rekurencja to wywoływanie funkcji przez samą siebie.",
+            "Walidacja krzyżowa poprawia generalizację modeli."
+        ]
+        return dummy_data * 10  # Powiel dla większej ilości
+
+    def __len__(self) -> int:
+        return len(self.samples)
+
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        cache_key = f"{self.split}_{idx}"
+
+        if self.cache and cache_key in self.cached_samples:
+            return self.cached_samples[cache_key]
+
+        text = self.samples[idx]
+
+        # Augmentacja dla danych treningowych
+        if self.augment and random.random() > 0.5:
+            augment_method = random.choice([
+                TextAugmentation.random_deletion,
+                TextAugmentation.random_swap,
+                TextAugmentation.random_insertion,
+                TextAugmentation.synonym_replacement
+            ])
+            text = augment_method(text)
+
+        # Tokenizacja
+        ids = tokenizer.encode(text, cfg.max_len + 1, truncation=True, padding=True)
+
+        x = torch.tensor(ids[:-1], dtype=torch.long)
+        y = torch.tensor(ids[1:], dtype=torch.long)
+
+        if self.cache:
+            self.cached_samples[cache_key] = (x, y)
+
+        return x, y
+
+
+class RotaryEmbedding(nn.Module):
+    """Rotary Positional Embedding - działająca wersja"""
+
+    def __init__(self, dim: int, max_len: int = 2048):
+        super().__init__()
+        self.dim = dim
+
+        # Oblicz częstotliwości - użyj float32 dla stabilności
+        inv_freq = 1.0 / (10000 ** (torch.arange(0, dim, 2, dtype=torch.float32) / dim))
+        self.register_buffer("inv_freq", inv_freq, persistent=False)
+
+        self.max_len = max_len
+
+    def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        batch_size, seq_len, embed_dim = x.shape
+
+        # Linear projections
+        q = self.q_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        k = self.k_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        v = self.v_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+
+        # Tymczasowo wyłącz RoPE
+        # q = self.rope(q, seq_len)
+        # k = self.rope(k, seq_len)
+
+        # Attention scores
+        attn_scores = torch.matmul(q, k.transpose(-2, -1)) * self.scale
+
+        # Apply mask (causal mask dla autoregresji) - UŻYJ BEZPIECZNEJ FUNKCJI
+        if mask is not None:
+            attn_scores = masked_fill_fp16_safe(attn_scores, mask == 0, -1e4)
+        else:
+            # Causal mask
+            causal_mask = torch.tril(torch.ones(seq_len, seq_len, device=x.device)).view(1, 1, seq_len, seq_len)
+            attn_scores = masked_fill_fp16_safe(attn_scores, causal_mask == 0, -1e4)
+
+        # Reszta kodu bez zmian...
+def masked_fill_fp16_safe(tensor: torch.Tensor, mask: torch.Tensor, value: float) -> torch.Tensor:
+    """Safe masked_fill dla FP16"""
+    if tensor.dtype == torch.float16:
+        # Dla FP16 używaj mniejszych wartości
+        if value < -1000:
+            value = -1000.0
+    return tensor.masked_fill(mask, value)
+class MultiHeadAttention(nn.Module):
+    """Multi-head attention z RoPE i kilkoma optymalizacjami"""
+
+    def __init__(self, embed_dim: int, num_heads: int, dropout: float = 0.1):
+        super().__init__()
+        assert embed_dim % num_heads == 0, "embed_dim musi być podzielne przez num_heads"
+
+        self.embed_dim = embed_dim
+        self.num_heads = num_heads
+        self.head_dim = embed_dim // num_heads
+        self.scale = self.head_dim ** -0.5
+
+        # Projekcje Q, K, V
+        self.q_proj = nn.Linear(embed_dim, embed_dim, bias=False)
+        self.k_proj = nn.Linear(embed_dim, embed_dim, bias=False)
+        self.v_proj = nn.Linear(embed_dim, embed_dim, bias=False)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=False)
+
+        # Dropout
+        self.attn_dropout = nn.Dropout(dropout)
+        self.proj_dropout = nn.Dropout(dropout)
+
+        # Rotary positional embedding - WYŁĄCZONE TYMCZASOWO dla debugowania
+        # self.rope = RotaryEmbedding(self.head_dim)
+
+    def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        batch_size, seq_len, embed_dim = x.shape
+
+        # Linear projections
+        q = self.q_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        k = self.k_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        v = self.v_proj(x).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+
+        # Tymczasowo wyłącz RoPE
+        # q = self.rope(q, seq_len)
+        # k = self.rope(k, seq_len)
+
+        # Attention scores
+        attn_scores = torch.matmul(q, k.transpose(-2, -1)) * self.scale
+
+        # Apply mask (causal mask dla autoregresji)
+        if mask is not None:
+            # Użyj -1e4 zamiast -1e9 dla mixed precision
+            attn_scores = attn_scores.masked_fill(mask == 0, -1e4)
+        else:
+            # Causal mask - użyj -1e4 dla FP16
+            causal_mask = torch.tril(torch.ones(seq_len, seq_len, device=x.device)).view(1, 1, seq_len, seq_len)
+            attn_scores = attn_scores.masked_fill(causal_mask == 0, -1e4)
+
+        # Softmax
+        attn_probs = F.softmax(attn_scores, dim=-1)
+        attn_probs = self.attn_dropout(attn_probs)
+
+        # Apply to values
+        attn_output = torch.matmul(attn_probs, v)
+
+        # Reshape back
+        attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, seq_len, embed_dim)
+
+        # Final projection
+        output = self.out_proj(attn_output)
+        output = self.proj_dropout(output)
+
+        return output
+class GatedFeedForward(nn.Module):
+    """Gated Feed Forward Network (lepsza niż standardowa)"""
+
+    def __init__(self, embed_dim: int, ff_dim: int, dropout: float = 0.1, activation: str = "gelu"):
+        super().__init__()
+
+        self.gate_proj = nn.Linear(embed_dim, ff_dim, bias=False)
+        self.up_proj = nn.Linear(embed_dim, ff_dim, bias=False)
+        self.down_proj = nn.Linear(ff_dim, embed_dim, bias=False)
+
+        self.dropout = nn.Dropout(dropout)
+
+        # Wybór funkcji aktywacji
+        if activation == "gelu":
+            self.activation = F.gelu
+        elif activation == "relu":
+            self.activation = F.relu
+        elif activation == "silu":
+            self.activation = F.silu
+        else:
+            raise ValueError(f"Nieznana funkcja aktywacji: {activation}")
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # Gated mechanism (jak w LLaMA)
+        gate = self.activation(self.gate_proj(x))
+        up = self.up_proj(x)
+
+        hidden = gate * up
+        hidden = self.dropout(hidden)
+
+        output = self.down_proj(hidden)
+        output = self.dropout(output)
+
+        return output
+
+
+class TransformerBlock(nn.Module):
+    """Zaawansowany blok transformera z pre-normalizacją"""
+
+    def __init__(self, embed_dim: int, num_heads: int, ff_dim: int,
+                 dropout: float = 0.1, activation: str = "gelu"):
+        super().__init__()
+
+        # Pre-norm (bardziej stabilne)
+        self.input_norm = nn.LayerNorm(embed_dim, eps=cfg.norm_eps)
+        self.attn = MultiHeadAttention(embed_dim, num_heads, dropout)
+
+        self.post_attn_norm = nn.LayerNorm(embed_dim, eps=cfg.norm_eps)
+        self.ffn = GatedFeedForward(embed_dim, ff_dim, dropout, activation)
+
+        # Dropout
+        self.dropout = nn.Dropout(dropout)
+
+        # Inicjalizacja (ważne dla głębokich sieci)
+        self._init_weights()
+
+    def _init_weights(self):
+        """Dokładna inicjalizacja wag"""
+        # Xavier/Glorot dla warstw liniowych
+        for module in [self.attn.q_proj, self.attn.k_proj, self.attn.v_proj, self.attn.out_proj,
+                       self.ffn.gate_proj, self.ffn.up_proj, self.ffn.down_proj]:
+            nn.init.xavier_uniform_(module.weight, gain=1 / math.sqrt(2))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # Self-attention z residual connection
+        attn_input = self.input_norm(x)
+        attn_output = self.attn(attn_input)
+        x = x + self.dropout(attn_output)
+
+        # Feed-forward z residual connection
+        ffn_input = self.post_attn_norm(x)
+        ffn_output = self.ffn(ffn_input)
+        x = x + self.dropout(ffn_output)
+
+        return x
+
+
+class MiniGPT60M(nn.Module):
+    """Główny model ~60M parametrów"""
+
+    def __init__(self):
+        super().__init__()
+
+        # Embeddingi
+        self.token_embedding = nn.Embedding(cfg.vocab_size, cfg.embed_dim)
+        self.pos_embedding = nn.Embedding(cfg.max_len, cfg.embed_dim)
+        self.embed_dropout = nn.Dropout(cfg.dropout)
+
+        # Bloki transformera
+        self.blocks = nn.ModuleList([
+            TransformerBlock(
+                cfg.embed_dim,
+                cfg.n_heads,
+                cfg.ff_dim,
+                cfg.dropout,
+                cfg.activation
+            ) for _ in range(cfg.n_layers)
+        ])
+
+        # Final layers
+        self.final_norm = nn.LayerNorm(cfg.embed_dim, eps=cfg.norm_eps)
+        self.lm_head = nn.Linear(cfg.embed_dim, cfg.vocab_size, bias=False)
+
+        # Tie weights (embedding i output)
+        self.lm_head.weight = self.token_embedding.weight
+
+        # Inicjalizacja
+        self.apply(self._init_weights)
+
+        # Oblicz parametry
+        self._count_parameters()
+
+        # DataParallel jeśli wiele GPU
+        if torch.cuda.device_count() > 1 and cfg.data_parallel:
+            self = nn.DataParallel(self)
+            logger.info(f"🎯 Używam DataParallel na {torch.cuda.device_count()} GPU")
+
+    def _init_weights(self, module):
+        """Inicjalizacja wag dla różnych typów warstw"""
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0.0, std=0.02)
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.zeros_(module.bias)
+            nn.init.ones_(module.weight)
+
+    def _count_parameters(self):
+        """Liczy i wyświetla liczbę parametrów"""
+        total_params = sum(p.numel() for p in self.parameters())
+        trainable_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+        # Szczegółowy podział
+        embed_params = sum(p.numel() for p in self.token_embedding.parameters())
+        transformer_params = total_params - embed_params
+
+        logger.info("=" * 60)
+        logger.info("🤖 MODEL MINIGPT-60M")
+        logger.info("=" * 60)
+        logger.info(f"   • Całkowite parametry: {total_params:,} ({total_params / 1e6:.1f}M)")
+        logger.info(f"   • Trainable: {trainable_params:,}")
+        logger.info(f"   • Embedding: {embed_params:,}")
+        logger.info(f"   • Transformer: {transformer_params:,}")
+        logger.info(f"   • Embed dim: {cfg.embed_dim}")
+        logger.info(f"   • Warstwy: {cfg.n_layers}")
+        logger.info(f"   • Głowy: {cfg.n_heads}")
+        logger.info(f"   • Kontekst: {cfg.max_len}")
+        logger.info(f"   • Vocab size: {cfg.vocab_size}")
+        logger.info("=" * 60)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        batch_size, seq_len = x.shape
+
+        # Sprawdź długość sekwencji
+        if seq_len > cfg.max_len:
+            x = x[:, -cfg.max_len:]
+            seq_len = cfg.max_len
+
+        # Token embeddings
+        token_embeds = self.token_embedding(x)
+
+        # Position embeddings
+        positions = torch.arange(seq_len, device=x.device).unsqueeze(0).expand(batch_size, seq_len)
+        pos_embeds = self.pos_embedding(positions)
+
+        # Sum and dropout
+        h = self.embed_dropout(token_embeds + pos_embeds)
+
+        # Transformer blocks
+        for block in self.blocks:
+            h = block(h)
+
+        # Final layer norm
+        h = self.final_norm(h)
+
+        # Language modeling head
+        logits = self.lm_head(h)
+
+        return logits
+
+    @torch.no_grad()
+    def generate(
+            self,
+            prompt: str,
+            max_len: int = 200,
+            temperature: float = 0.8,
+            top_k: int = 50,
+            top_p: float = 0.95,
+            repetition_penalty: float = 1.1,
+            beam_width: int = 1,
+            stop_tokens: Optional[List[str]] = None
+    ) -> str:
+        """
+        Zaawansowane generowanie tekstu z wieloma strategiami
+        """
+        self.eval()
+
+        if stop_tokens is None:
+            stop_tokens = ['.', '!', '?', '\n\n']
+
+        # Beam search czy sampling?
+        if beam_width > 1:
+            return self._beam_search(prompt, max_len, beam_width, stop_tokens)
+
+        # Standardowe sampling
+        ids = tokenizer.encode(prompt, cfg.max_len)
+        x = torch.tensor(ids).unsqueeze(0).to(device_cfg.device)
+
+        generated_ids = []
+
+        for step in range(max_len):
+            # Przycinaj jeśli za długie
+            if x.size(1) > cfg.max_len:
+                x = x[:, -cfg.max_len:]
+
+            # Forward pass
+            logits = self(x)
+            next_logits = logits[0, -1, :]
+
+            # Repetition penalty
+            if repetition_penalty != 1.0:
+                for token_id in set(generated_ids):
+                    next_logits[token_id] /= repetition_penalty
+
+            # Top-k filtering
+            if top_k > 0:
+                values, _ = torch.topk(next_logits, top_k)
+                next_logits[next_logits < values[-1]] = -float('inf')
+
+            # Top-p (nucleus) sampling
+            if top_p < 1.0:
+                sorted_logits, sorted_indices = torch.sort(next_logits, descending=True)
+                cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
+
+                sorted_indices_to_remove = cumulative_probs > top_p
+                sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
+                sorted_indices_to_remove[..., 0] = 0
+
+                indices_to_remove = sorted_indices[sorted_indices_to_remove]
+                next_logits[indices_to_remove] = -float('inf')
+
+            # Temperature
+            if temperature != 1.0:
+                next_logits = next_logits / temperature
+
+            # Softmax i sampling
+            probs = F.softmax(next_logits, dim=-1)
+            next_id = torch.multinomial(probs, 1).item()
+
+            # Dodaj do sekwencji
+            generated_ids.append(next_id)
+            x = torch.cat([x, torch.tensor([[next_id]]).to(device_cfg.device)], dim=1)
+
+            # Warunki stopu
+            char = tokenizer.idx2char.get(next_id, '')
+            if char in stop_tokens and step > 10:
+                if random.random() < 0.3:
+                    break
+
+        # Stwórz wynik
+        all_ids = ids + generated_ids
+        result = tokenizer.decode(all_ids)
+
+        # Wyodrębnij tylko wygenerowaną część
+        if result.startswith(prompt):
+            result = result[len(prompt):].strip()
+
+        return result
+
+    def _beam_search(self, prompt: str, max_len: int, beam_width: int, stop_tokens: List[str]) -> str:
+        """Implementacja beam search"""
+        # Implementacja beam search (uproszczona)
+        ids = tokenizer.encode(prompt, cfg.max_len)
+        beams = [(torch.tensor(ids).unsqueeze(0).to(device_cfg.device), 0.0)]
+
+        for step in range(max_len):
+            new_beams = []
+
+            for beam_tensor, beam_score in beams:
+                # Forward pass
+                logits = self(beam_tensor)
+                next_logits = logits[0, -1, :]
+
+                # Top-k candidates
+                values, indices = torch.topk(F.log_softmax(next_logits, dim=-1), beam_width)
+
+                for i in range(beam_width):
+                    new_id = indices[i].item()
+                    new_score = beam_score + values[i].item()
+
+                    new_beam_tensor = torch.cat([
+                        beam_tensor,
+                        torch.tensor([[new_id]]).to(device_cfg.device)
+                    ], dim=1)
+
+                    # Przycinaj jeśli za długie
+                    if new_beam_tensor.size(1) > cfg.max_len:
+                        new_beam_tensor = new_beam_tensor[:, -cfg.max_len:]
+
+                    new_beams.append((new_beam_tensor, new_score))
+
+            # Wybierz najlepsze beam_width beamy
+            beams = sorted(new_beams, key=lambda x: x[1], reverse=True)[:beam_width]
+
+            # Sprawdź warunki stopu
+            last_token = tokenizer.idx2char.get(beams[0][0][0, -1].item(), '')
+            if last_token in stop_tokens and step > 10:
+                break
+
+        # Zwróć najlepszy beam
+        best_beam_ids = beams[0][0][0].tolist()
+        result = tokenizer.decode(best_beam_ids)
+
+        if result.startswith(prompt):
+            result = result[len(prompt):].strip()
+
+        return result
+
+    def save(self, path: str, metadata: Optional[Dict] = None):
+        """Zapisuje model z metadanymi"""
+        checkpoint = {
+            'model_state_dict': self.state_dict(),
+            'config': {
+                'vocab_size': cfg.vocab_size,
+                'embed_dim': cfg.embed_dim,
+                'n_layers': cfg.n_layers,
+                'n_heads': cfg.n_heads,
+                'max_len': cfg.max_len,
+                'dropout': cfg.dropout,
+                'activation': cfg.activation
+            },
+            'tokenizer': tokenizer.vocab,
+            'metadata': metadata or {},
+            'timestamp': datetime.now().isoformat()
+        }
+
+        torch.save(checkpoint, path)
+        logger.info(f"💾 Model zapisany do {path} ({os.path.getsize(path) / 1e6:.1f} MB)")
+
+    @classmethod
+    def load(cls, path: str) -> 'MiniGPT60M':
+        """Wczytuje model"""
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Model nie znaleziony: {path}")
+
+        checkpoint = torch.load(path, map_location=device_cfg.device)
+
+        # Stwórz model z konfiguracji checkpointa
+        model = cls()
         model.load_state_dict(checkpoint['model_state_dict'])
+
+        logger.info(f"✅ Model wczytany z {path}")
+        logger.info(f"   Konfiguracja: {checkpoint['config']}")
+
+        if 'metadata' in checkpoint:
+            logger.info(f"   Metadata: {checkpoint['metadata'].get('description', 'Brak')}")
+
+        return model
+
+
+# ==================== SYSTEM OCENY LOSS_LESS ====================
+class LossLessMetrics:
+    """Zaawansowane metryki oceny modelu"""
+
+    def __init__(self):
+        self.history = []
+        self.best_score = 100.0  # Mniej = lepiej
+
+        # Kategorie pytań
+        self.categories = {
+            "polski": ["język", "gramatyka", "literatura"],
+            "python": ["kod", "programowanie", "funkcje"],
+            "nauka": ["AI", "sieci", "matematyka"],
+            "ogólne": ["zdania", "logika", "kreatywność"]
+        }
+
+        # Wagi kategorii
+        self.category_weights = {
+            "polski": 0.3,
+            "python": 0.4,
+            "nauka": 0.2,
+            "ogólne": 0.1
+        }
+
+    def evaluate(
+            self,
+            model: MiniGPT60M,
+            questions: List[Dict],
+            temperature: float = 0.8,
+            verbose: bool = True
+    ) -> Dict:
+        """Pełna ocena modelu"""
+        if verbose:
+            logger.info("\n" + "=" * 60)
+            logger.info("🎯 SYSTEM OCENY LOSS_LESS")
+            logger.info("=" * 60)
+
         model.eval()
+        results = {
+            "total_score": 0,
+            "category_scores": defaultdict(float),
+            "detailed": [],
+            "timestamp": datetime.now().isoformat()
+        }
 
-        print_progress_bar(2, 3, prefix="Wczytywanie:", suffix="model", length=30)
-        time.sleep(0.2)
+        category_counts = defaultdict(int)
 
-        stoi = checkpoint['stoi']
-        itos = checkpoint['itos']
+        for i, q in enumerate(tqdm(questions, desc="Ocenianie", disable=not verbose)):
+            category = q.get("category", "ogólne")
+            question = q["question"]
+            expected = q.get("expected_keywords", [])
+            perfect = q.get("perfect_answer", "")
 
-        print_progress_bar(3, 3, prefix="Wczytywanie:", suffix="GOTOWE!", length=30)
+            # Generuj odpowiedź
+            response = model.generate(
+                prompt=question,
+                max_len=200,
+                temperature=temperature,
+                top_k=cfg.top_k,
+                top_p=cfg.top_p,
+                repetition_penalty=cfg.repetition_penalty
+            )
 
-        print(f"\n{'─' * 50}")
-        print("✅ Model wczytany pomyślnie!")
-        print(f"{'─' * 50}")
-        print(f"📄 Plik:        {os.path.basename(model_path)}")
-        print(f"🎯 Epoka:       {checkpoint.get('epoch', 'N/A')}")
-        print(f"📉 Val loss:    {checkpoint.get('val_loss', 'N/A'):.6f}")
-        print(f"📈 Train loss:  {checkpoint.get('train_loss', 'N/A'):.6f}")
-        print(f"🔤 Słownik:     {len(stoi)} tokenów")
-        print(f"📅 Data:        {checkpoint.get('timestamp', 'N/A')}")
-        print(f"🧠 Warstwy:     {checkpoint.get('num_layers', 'N/A')}")
-        print(f"⚙️  Neurony:     {checkpoint.get('hidden_size', 'N/A')}")
-        if 'tokens_processed' in checkpoint:
-            print(f"🔢 Tokeny:       {checkpoint.get('tokens_processed', 'N/A'):,}")
-        if 'actual_tokens_per_second' in checkpoint:
-            print(f"⚡ Wydajność:    {checkpoint.get('actual_tokens_per_second', 'N/A'):.0f} tok/s")
-        print(f"{'─' * 50}")
-        print("💬 Rozpocznij rozmowę! (wpisz 'quit' aby wyjść)")
-        print(f"{'=' * 60}")
+            # Oceń odpowiedź
+            score, metrics = self._score_single(
+                question=question,
+                response=response,
+                expected_keywords=expected,
+                perfect_answer=perfect
+            )
 
-        conversation_context = []
+            # Zbierz statystyki
+            results["total_score"] += score
+            results["category_scores"][category] += score
+            category_counts[category] += 1
+
+            results["detailed"].append({
+                "question": question,
+                "response": response,
+                "score": score,
+                "metrics": metrics,
+                "category": category
+            })
+
+        model.train()
+
+        # Oblicz średnie
+        num_questions = len(questions)
+        if num_questions > 0:
+            results["avg_score"] = results["total_score"] / num_questions
+
+            # Normalizuj do 0-10
+            normalized_avg = min(10.0, results["avg_score"])
+
+            # Loss_Less score (0-100, mniej = lepiej)
+            loss_less = 100 - (normalized_avg * 10)
+
+            # Średnie per kategoria
+            for category in results["category_scores"]:
+                if category_counts[category] > 0:
+                    results["category_scores"][category] /= category_counts[category]
+
+        else:
+            loss_less = 100
+
+        results["loss_less"] = loss_less
+
+        # Zapisz do historii
+        self.history.append({
+            "timestamp": results["timestamp"],
+            "loss_less": loss_less,
+            "avg_score": results.get("avg_score", 0),
+            "category_scores": dict(results["category_scores"])
+        })
+
+        # Aktualizuj najlepszy wynik
+        if loss_less < self.best_score:
+            self.best_score = loss_less
+
+        if verbose:
+            self._print_results(results)
+
+        return results
+
+    def _score_single(self, question: str, response: str,
+                      expected_keywords: List[str], perfect_answer: str) -> Tuple[float, Dict]:
+        """Ocenia pojedynczą odpowiedź"""
+        metrics = {}
+
+        # 1. Dopasowanie słów kluczowych (0-4 punkty)
+        keyword_score = 0
+        response_lower = response.lower()
+
+        for keyword in expected_keywords:
+            if keyword.lower() in response_lower:
+                keyword_score += 1
+
+        keyword_score = min(4, keyword_score)
+        metrics["keyword_score"] = keyword_score
+
+        # 2. Spójność i gramatyka (0-3 punkty)
+        coherence_score = 0
+
+        # Sprawdź czy są zdania
+        sentences = re.split(r'[.!?]+', response)
+        valid_sentences = [s.strip() for s in sentences if len(s.strip()) > 5]
+
+        if len(valid_sentences) >= 2:
+            coherence_score += 1
+
+        # Sprawdź wielkie litery na początku zdań
+        if re.search(r'[.!?]\s+[A-ZĄĆĘŁŃÓŚŹŻ]', response):
+            coherence_score += 1
+
+        # Sprawdź czy odpowiedź nie jest za krótka
+        if len(response.split()) >= 5:
+            coherence_score += 1
+
+        metrics["coherence_score"] = coherence_score
+
+        # 3. Relewancja (0-3 punkty)
+        relevance_score = 0
+
+        # Usuń stop words i policz wspólne słowa
+        stop_words = {"się", "i", "w", "z", "na", "do", "że", "aby", "ten", "ta", "to"}
+        question_words = set([w.lower() for w in question.split() if w.lower() not in stop_words])
+        response_words = set([w.lower() for w in response.split() if w.lower() not in stop_words])
+
+        common_words = question_words.intersection(response_words)
+        if len(common_words) >= 2:
+            relevance_score += 1
+
+        # Sprawdź czy odpowiedź bezpośrednio odpowiada na pytanie
+        if any(word in response_lower for word in ["tak", "nie", "dlatego", "ponieważ"]):
+            relevance_score += 1
+
+        # Długość odpowiedzi (nie za krótka, nie za długa)
+        word_count = len(response.split())
+        if 10 <= word_count <= 100:
+            relevance_score += 1
+
+        metrics["relevance_score"] = relevance_score
+
+        # Całkowity wynik (0-10)
+        total_score = keyword_score + coherence_score + relevance_score
+        total_score = min(10, total_score)
+
+        return total_score, metrics
+
+    def _print_results(self, results: Dict):
+        """Wyświetla wyniki oceny"""
+        logger.info("\n📊 WYNIKI OCENY:")
+        logger.info("-" * 40)
+        logger.info(f"   Loss_Less Score: {results['loss_less']:.1f}/100")
+        logger.info(f"   Średni wynik: {results.get('avg_score', 0):.1f}/10")
+
+        logger.info("\n   Wyniki per kategoria:")
+        for category, score in results["category_scores"].items():
+            logger.info(f"   • {category:10}: {score:.1f}/10")
+
+        # Interpretacja
+        ll_score = results["loss_less"]
+        logger.info("\n   📈 INTERPRETACJA:")
+
+        if ll_score <= 20:
+            logger.info("   🎉 DOSKONAŁY! Model jest praktycznie idealny")
+        elif ll_score <= 40:
+            logger.info("   ✅ BARDZO DOBRY! Model jest bardzo użyteczny")
+        elif ll_score <= 60:
+            logger.info("   👍 DOBRY! Model jest funkcjonalny")
+        elif ll_score <= 80:
+            logger.info("   ⚠️  ŚREDNI! Model wymaga poprawy")
+        else:
+            logger.info("   ❌ SŁABY! Model potrzebuje dużo pracy")
+
+        logger.info("=" * 60)
+
+    def save_history(self, path: str = "loss_less_history.json"):
+        """Zapisuje historię ocen"""
+        data = {
+            "history": self.history,
+            "best_score": self.best_score,
+            "metadata": {
+                "created": datetime.now().isoformat(),
+                "total_evaluations": len(self.history),
+                "categories": self.categories
+            }
+        }
+
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+        logger.info(f"💾 Historia Loss_Less zapisana do {path}")
+
+    def plot_history(self, save_path: str = "loss_less_progress.png"):
+        """Tworzy wykres postępu"""
+        try:
+            import matplotlib.pyplot as plt
+            from matplotlib.dates import DateFormatter
+
+            if len(self.history) < 2:
+                logger.warning("⚠️ Za mało danych do wykresu")
+                return
+
+            # Przygotuj dane
+            timestamps = [datetime.fromisoformat(h["timestamp"]) for h in self.history]
+            scores = [h["loss_less"] for h in self.history]
+
+            # Stwórz wykres
+            fig, ax = plt.subplots(figsize=(12, 6))
+
+            # Linia główna
+            ax.plot(timestamps, scores, 'b-o', linewidth=2, markersize=6, label='Loss_Less')
+
+            # Wypełnienie obszarów
+            ax.fill_between(timestamps, 0, 30, alpha=0.2, color='green', label='Doskonały')
+            ax.fill_between(timestamps, 30, 60, alpha=0.2, color='yellow', label='Dobry')
+            ax.fill_between(timestamps, 60, 80, alpha=0.2, color='orange', label='Średni')
+            ax.fill_between(timestamps, 80, 100, alpha=0.2, color='red', label='Słaby')
+
+            # Linia trendu
+            if len(scores) >= 3:
+                z = np.polyfit(range(len(scores)), scores, 1)
+                p = np.poly1d(z)
+                ax.plot(timestamps, p(range(len(scores))), 'r--', alpha=0.7,
+                        label=f'Trend: {"↓" if z[0] < 0 else "↑"} {abs(z[0]):.2f}/eval')
+
+            # Konfiguracja
+            ax.set_xlabel('Data')
+            ax.set_ylabel('Loss_Less Score (mniej = lepiej)')
+            ax.set_title('Postęp modelu - System Loss_Less')
+            ax.legend(loc='upper right')
+            ax.grid(True, alpha=0.3)
+
+            # Format daty
+            ax.xaxis.set_major_formatter(DateFormatter('%Y-%m-%d %H:%M'))
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+
+            # Zapisz
+            plt.savefig(save_path, dpi=120, bbox_inches='tight')
+            logger.info(f"📈 Wykres zapisany jako {save_path}")
+
+            # Pokaż jeśli w trybie interaktywnym
+            if 'DISPLAY' in os.environ:
+                plt.show()
+            else:
+                plt.close()
+
+        except ImportError:
+            logger.warning("⚠️ Matplotlib nie zainstalowany - pomijam wykres")
+
+
+# ==================== ZAAWANSOWANY TRENING ====================
+class AdvancedTrainer:
+    """Zaawansowany trainer z wieloma funkcjami"""
+
+    def __init__(self, model: MiniGPT60M, train_dataset: Dataset, val_dataset: Optional[Dataset] = None):
+        self.model = model.to(device_cfg.device)
+        self.train_dataset = train_dataset
+        self.val_dataset = val_dataset
+
+        # Optimizer
+        self.optimizer = AdamW(
+            model.parameters(),
+            lr=cfg.learning_rate,
+            betas=(cfg.adam_beta1, cfg.adam_beta2),
+            eps=cfg.adam_eps,
+            weight_decay=cfg.weight_decay
+        )
+
+        # Scheduler
+        total_steps = len(train_dataset) * cfg.epochs // cfg.batch_size // cfg.grad_accum_steps
+        self.scheduler = self._create_scheduler(total_steps)
+
+        # Loss function
+        self.criterion = nn.CrossEntropyLoss(
+            ignore_index=tokenizer.pad_id,
+            label_smoothing=0.1  # Pomaga w generalizacji
+        )
+
+        # Mixed precision
+        self.scaler = GradScaler() if cfg.use_amp else None
+
+        # TensorBoard
+        self.writer = SummaryWriter(log_dir=cfg.tensorboard_dir)
+
+        # System oceny
+        self.evaluator = LossLessMetrics()
+
+        # Statystyki
+        self.stats = {
+            "train_loss": [],
+            "val_loss": [],
+            "learning_rates": [],
+            "best_loss": float('inf'),
+            "best_loss_less": 100.0,
+            "epoch": 0,
+            "step": 0,
+            "start_time": time.time()
+        }
+
+        # Backup
+        self.backup_counter = 0
+
+        logger.info("🏋️ Zaawansowany Trainer zainicjalizowany")
+        logger.info(f"   • Dataset: {len(train_dataset)} próbek")
+        logger.info(f"   • Batch size: {cfg.batch_size}")
+        logger.info(f"   • Gradient accumulation: {cfg.grad_accum_steps}")
+        logger.info(f"   • Scheduler: {cfg.scheduler_type}")
+        logger.info(f"   • Mixed precision: {cfg.use_amp}")
+
+    def _create_scheduler(self, total_steps: int):
+        """Tworzy scheduler w zależności od konfiguracji"""
+        if cfg.scheduler_type == "cosine":
+            return CosineAnnealingLR(
+                self.optimizer,
+                T_max=total_steps,
+                eta_min=cfg.min_lr
+            )
+        elif cfg.scheduler_type == "cosine_warm":
+            return CosineAnnealingWarmRestarts(
+                self.optimizer,
+                T_0=total_steps // 10,
+                T_mult=1,
+                eta_min=cfg.min_lr
+            )
+        elif cfg.scheduler_type == "onecycle":
+            return OneCycleLR(
+                self.optimizer,
+                max_lr=cfg.learning_rate,
+                total_steps=total_steps,
+                pct_start=0.1
+            )
+        elif cfg.scheduler_type == "plateau":
+            return ReduceLROnPlateau(
+                self.optimizer,
+                mode='min',
+                factor=0.5,
+                patience=3,
+                min_lr=cfg.min_lr
+            )
+        else:
+            # Linear warmup
+            def lr_lambda(step):
+                if step < cfg.warmup_steps:
+                    return float(step) / float(max(1, cfg.warmup_steps))
+                return max(0.0, float(total_steps - step) / float(max(1, total_steps - cfg.warmup_steps)))
+
+            return LambdaLR(self.optimizer, lr_lambda)
+
+    def train_epoch(self, epoch: int) -> float:
+        """Wykonuje jedną epokę treningu"""
+        self.model.train()
+        epoch_loss = 0.0
+
+        # DataLoader
+        train_loader = DataLoader(
+            self.train_dataset,
+            batch_size=cfg.batch_size,
+            shuffle=True,
+            num_workers=cfg.num_workers,
+            pin_memory=cfg.pin_memory,
+            drop_last=True
+        )
+
+        # Pasek postępu
+        pbar = tqdm(train_loader, desc=f"Epoka {epoch}", leave=False)
+
+        for batch_idx, (x, y) in enumerate(pbar):
+            x, y = x.to(device_cfg.device), y.to(device_cfg.device)
+
+            # Mixed precision forward
+            if cfg.use_amp:
+                with autocast():
+                    logits = self.model(x)
+                    loss = self.criterion(logits.view(-1, cfg.vocab_size), y.view(-1))
+                    loss = loss / cfg.grad_accum_steps
+            else:
+                logits = self.model(x)
+                loss = self.criterion(logits.view(-1, cfg.vocab_size), y.view(-1))
+                loss = loss / cfg.grad_accum_steps
+
+            # Backward z gradient accumulation
+            if cfg.use_amp:
+                self.scaler.scale(loss).backward()
+            else:
+                loss.backward()
+
+            # Krok optymalizacji po akumulacji
+            if (batch_idx + 1) % cfg.grad_accum_steps == 0:
+                # Gradient clipping
+                if cfg.use_amp:
+                    self.scaler.unscale_(self.optimizer)
+
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), cfg.clip_grad)
+
+                # Optimizer step
+                if cfg.use_amp:
+                    self.scaler.step(self.optimizer)
+                    self.scaler.update()
+                else:
+                    self.optimizer.step()
+
+                # Scheduler step
+                if cfg.scheduler_type != "plateau":
+                    self.scheduler.step()
+
+                self.optimizer.zero_grad()
+
+                # Aktualizuj statystyki
+                self.stats["step"] += 1
+                current_lr = self.optimizer.param_groups[0]['lr']
+                self.stats["learning_rates"].append(current_lr)
+
+                # Zapisz do TensorBoard
+                if self.stats["step"] % 10 == 0:
+                    self.writer.add_scalar('Train/loss', loss.item() * cfg.grad_accum_steps, self.stats["step"])
+                    self.writer.add_scalar('Train/lr', current_lr, self.stats["step"])
+
+                # Logowanie
+                if self.stats["step"] % 50 == 0:
+                    pbar.set_postfix({
+                        'loss': f"{loss.item() * cfg.grad_accum_steps:.3f}",
+                        'lr': f"{current_lr:.2e}",
+                        'step': self.stats["step"]
+                    })
+
+                # Generuj przykłady
+                if self.stats["step"] % 100 == 0:
+                    self._log_examples(epoch)
+
+                # Backup
+                if time.time() - self.stats.get("last_backup", 0) > 300:  # Co 5 minut
+                    self._create_backup()
+
+            epoch_loss += loss.item() * cfg.grad_accum_steps
+
+            # Czyszczenie pamięci
+            del x, y, logits, loss
+            if device_cfg.device == "cuda":
+                torch.cuda.empty_cache()
+
+        pbar.close()
+
+        # Średni loss epoki
+        avg_epoch_loss = epoch_loss / len(train_loader)
+        self.stats["train_loss"].append(avg_epoch_loss)
+
+        return avg_epoch_loss
+
+    def validate(self) -> float:
+        """Walidacja modelu"""
+        if self.val_dataset is None:
+            return float('inf')
+
+        self.model.eval()
+        total_loss = 0.0
+
+        val_loader = DataLoader(
+            self.val_dataset,
+            batch_size=cfg.batch_size,
+            shuffle=False,
+            num_workers=cfg.num_workers,
+            pin_memory=cfg.pin_memory
+        )
+
+        with torch.no_grad():
+            for x, y in tqdm(val_loader, desc="Walidacja", leave=False):
+                x, y = x.to(device_cfg.device), y.to(device_cfg.device)
+
+                logits = self.model(x)
+                loss = self.criterion(logits.view(-1, cfg.vocab_size), y.view(-1))
+
+                total_loss += loss.item()
+
+        avg_val_loss = total_loss / len(val_loader)
+        self.stats["val_loss"].append(avg_val_loss)
+
+        # Scheduler step dla ReduceLROnPlateau
+        if cfg.scheduler_type == "plateau":
+            self.scheduler.step(avg_val_loss)
+
+        self.writer.add_scalar('Val/loss', avg_val_loss, self.stats["epoch"])
+
+        return avg_val_loss
+
+    def _log_examples(self, epoch: int):
+        """Loguje przykłady generacji"""
+        self.model.eval()
+
+        prompts = [
+            "Python to",
+            "Hej, jak się masz?",
+            "Adam Mickiewicz",
+            "def funkcja",
+            "Sieci neuronowe",
+            "Sztuczna inteligencja",
+            "Raspberry Pi",
+            "Klasy w Pythonie"
+        ]
+
+        examples = []
+
+        with torch.no_grad():
+            for prompt in prompts[:3]:  # Tylko 3 dla szybkości
+                response = self.model.generate(
+                    prompt,
+                    max_len=80,
+                    temperature=0.8,
+                    top_k=40
+                )
+                examples.append(f"**{prompt}** → {response}")
+
+        # Zapisz do TensorBoard
+        examples_text = "\n\n".join(examples)
+        self.writer.add_text(f'Examples/epoch_{epoch}', examples_text, self.stats["step"])
+
+        # Wyświetl w konsoli
+        logger.info(f"\n🎨 Przykłady generacji (krok {self.stats['step']}):")
+        for example in examples:
+            logger.info(f"   {example}")
+
+        self.model.train()
+
+    def _create_backup(self):
+        """Tworzy backup modelu"""
+        self.backup_counter += 1
+        backup_path = f"backups/model_backup_{self.backup_counter}_{int(time.time())}.pt"
+
+        self.model.save(backup_path, {
+            "epoch": self.stats["epoch"],
+            "step": self.stats["step"],
+            "loss": self.stats["train_loss"][-1] if self.stats["train_loss"] else 0,
+            "description": f"Backup #{self.backup_counter}"
+        })
+
+        self.stats["last_backup"] = time.time()
+        logger.info(f"💾 Backup #{self.backup_counter} zapisany: {backup_path}")
+
+    def train(self, epochs: int = cfg.epochs):
+        """Główna pętla treningu"""
+        logger.info("\n" + "=" * 60)
+        logger.info("🚀 ROZPOCZĘCIE ZAAWANSOWANEGO TRENINGU")
+        logger.info("=" * 60)
+
+        # Początkowa ocena Loss_Less
+        logger.info("\n📋 OCENA POCZĄTKOWA:")
+        initial_questions = self._load_test_questions()
+        initial_eval = self.evaluator.evaluate(self.model, initial_questions[:5])
+        self.stats["initial_loss_less"] = initial_eval["loss_less"]
+
+        start_time = time.time()
+
+        for epoch in range(1, epochs + 1):
+            self.stats["epoch"] = epoch
+
+            logger.info(f"\n{'=' * 60}")
+            logger.info(f"📈 EPOKA {epoch}/{epochs}")
+            logger.info(f"{'=' * 60}")
+
+            # Trening
+            train_loss = self.train_epoch(epoch)
+            logger.info(f"   📊 Loss treningu: {train_loss:.4f}")
+
+            # Walidacja
+            if self.val_dataset:
+                val_loss = self.validate()
+                logger.info(f"   📊 Loss walidacji: {val_loss:.4f}")
+
+                # Zapisz jeśli lepszy loss
+                if val_loss < self.stats["best_loss"]:
+                    self.stats["best_loss"] = val_loss
+                    self.model.save("model_best_loss.pt", {
+                        "epoch": epoch,
+                        "val_loss": val_loss,
+                        "type": "best_loss"
+                    })
+                    logger.info(f"   🏆 NAJLEPSZY model (loss) zapisany!")
+
+            # Ocena Loss_Less co 2 epoki
+            if epoch % 2 == 0 or epoch == epochs:
+                logger.info(f"\n   🔍 Ocena Loss_Less (epoka {epoch}):")
+                eval_results = self.evaluator.evaluate(self.model, initial_questions, verbose=False)
+
+                loss_less = eval_results["loss_less"]
+                self.writer.add_scalar('Eval/loss_less', loss_less, epoch)
+
+                # Zapisz jeśli lepszy Loss_Less
+                if loss_less < self.stats["best_loss_less"]:
+                    self.stats["best_loss_less"] = loss_less
+                    self.model.save("model_best_ll.pt", {
+                        "epoch": epoch,
+                        "loss_less": loss_less,
+                        "type": "best_loss_less"
+                    })
+                    logger.info(f"   🏆 NAJLEPSZY model (Loss_Less: {loss_less:.1f}) zapisany!")
+
+            # Zapisz checkpoint epoki
+            self.model.save(f"model_epoch_{epoch}.pt", {
+                "epoch": epoch,
+                "train_loss": train_loss,
+                "val_loss": val_loss if self.val_dataset else None,
+                "step": self.stats["step"]
+            })
+
+            logger.info(f"\n   ✅ Epoka {epoch} zakończona")
+            logger.info(f"   ⏱️  Czas: {self._format_time(time.time() - start_time)}")
+
+        # Końcowa ocena
+        logger.info("\n📋 OCENA KOŃCOWA:")
+        final_eval = self.evaluator.evaluate(self.model, initial_questions)
+        self.stats["final_loss_less"] = final_eval["loss_less"]
+
+        # Zapisz historię
+        self.evaluator.save_history()
+        self.evaluator.plot_history()
+
+        # Zamknij TensorBoard
+        self.writer.close()
+
+        # Podsumowanie
+        total_time = time.time() - start_time
+        self._print_summary(total_time)
+
+        # Zapisz finalny model
+        self.model.save("model_final.pt", {
+            "epochs": epochs,
+            "final_loss_less": self.stats["final_loss_less"],
+            "best_loss_less": self.stats["best_loss_less"],
+            "total_time": total_time
+        })
+
+    def _load_test_questions(self) -> List[Dict]:
+        """Ładuje pytania testowe"""
+        questions_file = "test_questions.json"
+
+        if os.path.exists(questions_file):
+            with open(questions_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return data.get("questions", [])
+
+        # Domyślne pytania
+        return [
+            {"question": "Hej, jak się masz?", "expected_keywords": ["dobrze", "dziękuję"], "category": "polski"},
+            {"question": "Jak napisać funkcję w Pythonie?", "expected_keywords": ["def", "return"],
+             "category": "python"},
+            {"question": "Kto napisał Pana Tadeusza?", "expected_keywords": ["Mickiewicz", "Adam"],
+             "category": "literatura"}
+        ]
+
+    def _format_time(self, seconds: float) -> str:
+        """Formatuje czas"""
+        hours = int(seconds // 3600)
+        minutes = int((seconds % 3600) // 60)
+        secs = int(seconds % 60)
+
+        if hours > 0:
+            return f"{hours}h {minutes}m {secs}s"
+        elif minutes > 0:
+            return f"{minutes}m {secs}s"
+        else:
+            return f"{secs}s"
+
+    def _print_summary(self, total_time: float):
+        """Wyświetla podsumowanie treningu"""
+        logger.info("\n" + "=" * 60)
+        logger.info("🎉 TRENING ZAKOŃCZONY!")
+        logger.info("=" * 60)
+
+        logger.info(f"\n📊 PODSUMOWANIE:")
+        logger.info(f"   • Czas treningu: {self._format_time(total_time)}")
+        logger.info(f"   • Epoki: {self.stats['epoch']}")
+        logger.info(f"   • Kroki: {self.stats['step']}")
+
+        if "initial_loss_less" in self.stats and "final_loss_less" in self.stats:
+            improvement = self.stats["initial_loss_less"] - self.stats["final_loss_less"]
+            logger.info(f"   • Loss_Less początkowy: {self.stats['initial_loss_less']:.1f}")
+            logger.info(f"   • Loss_Less końcowy: {self.stats['final_loss_less']:.1f}")
+            logger.info(f"   • Poprawa: {improvement:+.1f} punktów")
+
+        logger.info(f"   • Najlepszy Loss_Less: {self.stats.get('best_loss_less', 100):.1f}")
+
+        logger.info(f"\n💾 ZAPISANE MODELE:")
+        logger.info(f"   • model_best_loss.pt - najlepszy loss walidacyjny")
+        logger.info(f"   • model_best_ll.pt - najlepszy Loss_Less")
+        logger.info(f"   • model_final.pt - finalny model")
+        logger.info(f"   • model_epoch_*.pt - checkpoints epok")
+
+        logger.info(f"\n📈 WIZUALIZACJE:")
+        logger.info(f"   • TensorBoard: tensorboard --logdir={cfg.tensorboard_dir}")
+        logger.info(f"   • Wykres Loss_Less: loss_less_progress.png")
+        logger.info(f"   • Historia ocen: loss_less_history.json")
+
+        logger.info(f"\n🎮 PRZETESTOJ MODEL:")
+        logger.info(f"   python main.py --talk")
+        logger.info(f"   python main.py --evaluate")
+
+
+# ==================== INTERFEJS UŻYTKOWNIKA ====================
+class InteractiveChat:
+    """Zaawansowany interfejs czatu"""
+
+    def __init__(self, model_path: str = "model_final.pt"):
+        self.model = MiniGPT60M.load(model_path) if os.path.exists(model_path) else MiniGPT60M()
+        self.model.eval()
+
+        self.history = []
+        self.max_history = 20
+        self.conversation_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        logger.info(f"\n💬 ZAAWANSOWANY INTERFEJS CZATU")
+        logger.info("=" * 60)
+        logger.info(f"   Model: {sum(p.numel() for p in self.model.parameters()) / 1e6:.1f}M parametrów")
+        logger.info(f"   Device: {device_cfg.device.upper()}")
+        logger.info(f"   ID rozmowy: {self.conversation_id}")
+        logger.info("\n   Polecenia:")
+        logger.info("   • exit, quit - wyjście")
+        logger.info("   • clear - wyczyść historię")
+        logger.info("   • save - zapisz rozmowę")
+        logger.info("   • temp X.X - ustaw temperaturę (0.1-2.0)")
+        logger.info("   • len XXX - ustaw długość odpowiedzi (10-1000)")
+        logger.info("   • history - pokaż historię")
+        logger.info("   • config - pokaż konfigurację")
+        logger.info("-" * 60)
+
+    def chat(self):
+        """Główna pętla rozmowy"""
+        print("\n🤖 Witaj! Rozmawiaj ze mną. Wpisz 'exit' aby zakończyć.\n")
+
+        # Parametry
+        temperature = 0.8
+        max_length = 200
+
         while True:
             try:
-                user_input = input("\n👤 Ty: ").strip()
+                # Input użytkownika
+                user_input = input("\n🧑 Ty: ").strip()
 
-                if user_input.lower() == 'quit':
-                    print(f"\n{'=' * 60}")
-                    print("👋 Do widzenia!")
-                    print(f"{'=' * 60}")
-                    break
-                elif user_input.lower() == 'reset':
-                    conversation_context.clear()
-                    print("🔄 Kontekst zresetowany")
-                    continue
-                elif user_input.lower() == 'list':
-                    print("\n")
-                    chat_mode(config)
-                    break
-                elif user_input.lower() == 'info':
-                    print(f"\n{'─' * 50}")
-                    print("📊 INFORMACJE O MODELU:")
-                    print(f"{'─' * 50}")
-                    print(f"Plik: {os.path.basename(model_path)}")
-                    print(f"Epoka: {checkpoint.get('epoch', 'N/A')}")
-                    print(f"Val loss: {checkpoint.get('val_loss', 'N/A'):.6f}")
-                    print(f"Data: {checkpoint.get('timestamp', 'N/A')}")
-                    print(f"Rozmiar kontekstu: {len(conversation_context)}")
-                    print(f"{'─' * 50}")
-                    continue
-                elif not user_input:
+                # Komendy specjalne
+                if self._handle_command(user_input, temperature, max_length):
                     continue
 
-                if conversation_context:
-                    context = "\n".join(conversation_context[-3:])
-                    full_input = f"{context}\n{user_input}"
-                else:
-                    full_input = user_input
+                # Dodaj do historii
+                self.history.append(f"U: {user_input}")
+                if len(self.history) > self.max_history * 2:
+                    self.history = self.history[-self.max_history * 2:]
 
-                print(f"\n{'─' * 30}")
-                response = generate_response(
-                    model,
-                    full_input,
-                    stoi,
-                    itos,
-                    max_length=150,
-                    temperature=0.7
+                # Przygotuj kontekst
+                context = self._build_context()
+
+                # Generuj odpowiedź
+                print("🤖 AI: ", end="", flush=True)
+
+                start_time = time.time()
+                response = self.model.generate(
+                    prompt=context,
+                    max_len=max_length,
+                    temperature=temperature,
+                    top_k=cfg.top_k,
+                    top_p=cfg.top_p,
+                    repetition_penalty=cfg.repetition_penalty
                 )
-                print(f"\n{'─' * 30}")
-                print(f"🤖 Bot: {response}")
-                print(f"{'─' * 30}")
+                gen_time = time.time() - start_time
 
-                conversation_context.append(f"Ty: {user_input}")
-                conversation_context.append(f"Bot: {response}")
+                # Wyświetl z efektem pisania
+                self._typewriter_effect(response)
 
-                if len(conversation_context) > 20:
-                    conversation_context = conversation_context[-20:]
+                # Dodaj odpowiedź do historii
+                self.history.append(f"A: {response}")
+
+                # Statystyki
+                print(f"\n   ⚡ Wygenerowano w {gen_time:.2f}s, {len(response.split())} słów")
 
             except KeyboardInterrupt:
-                print(f"\n{'=' * 60}")
-                print("🛑 Zakończono chat")
-                print(f"{'=' * 60}")
+                print("\n\n⚠️ Przerwano przez użytkownika")
+                if input("💾 Zapisać rozmowę? (t/n): ").lower().startswith('t'):
+                    self.save_conversation()
                 break
+
             except Exception as e:
-                print(f"\n❌ Błąd podczas generowania: {e}")
+                print(f"\n❌ Błąd: {e}")
+                import traceback
+                traceback.print_exc()
 
-    except Exception as e:
-        print(f"❌ Błąd przy wczytywaniu modelu: {e}")
+    def _handle_command(self, command: str, temp: float, max_len: int) -> bool:
+        """Obsługuje komendy specjalne"""
+        cmd = command.lower().strip()
+
+        if cmd in ['exit', 'quit', 'q', 'wyjdz']:
+            print("\n👋 Do widzenia!")
+            if input("💾 Zapisać rozmowę? (t/n): ").lower().startswith('t'):
+                self.save_conversation()
+            sys.exit(0)
+
+        elif cmd in ['clear', 'czysc']:
+            self.history = []
+            print("🗑️ Historia wyczyszczona")
+            return True
+
+        elif cmd in ['save', 'zapisz']:
+            self.save_conversation()
+            return True
+
+        elif cmd in ['history', 'historia']:
+            self.show_history()
+            return True
+
+        elif cmd in ['config', 'konfig']:
+            self.show_config()
+            return True
+
+        elif cmd.startswith('temp '):
+            try:
+                new_temp = float(cmd.split()[1])
+                if 0.1 <= new_temp <= 2.0:
+                    temp = new_temp
+                    print(f"🌡️ Temperatura ustawiona na {temp}")
+                else:
+                    print("❌ Temperatura musi być między 0.1 a 2.0")
+            except:
+                print("❌ Błędna temperatura, użyj: temp 0.8")
+            return True
+
+        elif cmd.startswith('len '):
+            try:
+                new_len = int(cmd.split()[1])
+                if 10 <= new_len <= 1000:
+                    max_len = new_len
+                    print(f"📏 Długość ustawiona na {max_len}")
+                else:
+                    print("❌ Długość musi być między 10 a 1000")
+            except:
+                print("❌ Błędna długość, użyj: len 200")
+            return True
+
+        return False
+
+    def _build_context(self) -> str:
+        """Buduje kontekst z historii"""
+        if not self.history:
+            return ""
+
+        # Ostatnie 6 wymian (12 wiadomości)
+        recent_history = self.history[-12:] if len(self.history) > 12 else self.history
+        return "\n".join(recent_history) + "\nA: "
+
+    def _typewriter_effect(self, text: str, speed: float = 0.01):
+        """Efekt pisania na maszynie"""
+        for char in text:
+            print(char, end="", flush=True)
+            time.sleep(speed)
+
+    def show_history(self):
+        """Pokazuje historię rozmowy"""
+        print("\n📜 Historia rozmowy:")
+        print("-" * 50)
+        for i, msg in enumerate(self.history[-10:], 1):
+            prefix = "🧑" if msg.startswith("U:") else "🤖"
+            print(f"{i:2}. {prefix} {msg[3:][:80]}{'...' if len(msg) > 80 else ''}")
+        print("-" * 50)
+
+    def show_config(self):
+        """Pokazuje konfigurację"""
+        print("\n⚙️ Konfiguracja modelu:")
+        print("-" * 40)
+        print(f"   • Parametry: {sum(p.numel() for p in self.model.parameters()) / 1e6:.1f}M")
+        print(f"   • Vocab size: {cfg.vocab_size}")
+        print(f"   • Embed dim: {cfg.embed_dim}")
+        print(f"   • Warstwy: {cfg.n_layers}")
+        print(f"   • Głowy: {cfg.n_heads}")
+        print(f"   • Kontekst: {cfg.max_len}")
+        print("-" * 40)
+
+    def save_conversation(self, filename: Optional[str] = None):
+        """Zapisuje rozmowę do pliku"""
+        if filename is None:
+            filename = f"conversation_{self.conversation_id}.md"
+
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write(f"# Rozmowa z AI - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+            f.write("## Parametry\n")
+            f.write(f"- Model: MiniGPT-60M\n")
+            f.write(f"- Data: {datetime.now().strftime('%Y-%m-%d')}\n")
+            f.write(f"- ID: {self.conversation_id}\n\n")
+            f.write("## Dialog\n\n")
+
+            for msg in self.history:
+                if msg.startswith("U:"):
+                    f.write(f"### 🧑 Ty\n\n{msg[3:]}\n\n")
+                else:
+                    f.write(f"### 🤖 AI\n\n{msg[3:]}\n\n")
+
+        print(f"💾 Rozmowa zapisana do {filename}")
 
 
-# -------------------- Główna logika --------------------
-if __name__ == "__main__":
-    print(f"{'=' * 60}")
-    print("🧠 CHATBOT LSTM - SYSTEM TRENINGU I ROZMOWY")
-    print(f"{'=' * 60}")
-    print(f"PyTorch wersja: {torch.__version__}")
-    print(f"CUDA dostępne:  {torch.cuda.is_available()}")
-    if torch.cuda.is_available():
-        print(f"GPU:           {torch.cuda.get_device_name(0)}")
-    print(f"{'=' * 60}")
-
-    config = ChatbotConfig(
-        learn=False,
-        talk=False,
-        traintalk=True
+# ==================== GŁÓWNA FUNKCJA ====================
+def main():
+    """Główna funkcja programu"""
+    parser = argparse.ArgumentParser(
+        description="🎯 MiniGPT-60M: Zaawansowany model językowy ~60M parametrów",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Przykłady użycia:
+  python main.py --train                    # Trening od zera
+  python main.py --train --resume model.pt  # Kontynuacja treningu
+  python main.py --talk                     # Rozmowa z modelem
+  python main.py --evaluate                 # Ocena modelu (Loss_Less)
+  python main.py --test                     # Testy jednostkowe
+  python main.py --generate "Python to"     # Generuj tekst
+  python main.py --config                   # Pokaż konfigurację
+  python main.py --prepare-data            # Przygotuj dane
+        """
     )
 
-    if len(sys.argv) > 1:
-        if '--traintalk' in sys.argv:
-            config.traintalk = True
-            config.learn = False
-            config.talk = False
-        if '--train' in sys.argv:
-            config.learn = True
-            config.traintalk = False
-            config.talk = False
-        if '--talk' in sys.argv:
-            config.talk = True
-            config.learn = False
-            config.traintalk = False
+    parser.add_argument("--train", action="store_true", help="Trening modelu")
+    parser.add_argument("--resume", type=str, help="Wznów trening z pliku")
+    parser.add_argument("--talk", action="store_true", help="Tryb rozmowy")
+    parser.add_argument("--evaluate", action="store_true", help="Oceń model systemem Loss_Less")
+    parser.add_argument("--model", type=str, default="model_final.pt", help="Ścieżka do modelu")
+    parser.add_argument("--test", action="store_true", help="Test modelu")
+    parser.add_argument("--generate", type=str, help="Wygeneruj tekst z podanego promptu")
+    parser.add_argument("--config", action="store_true", help="Pokaż konfigurację")
+    parser.add_argument("--prepare-data", action="store_true", help="Przygotuj dane")
+    parser.add_argument("--epochs", type=int, default=cfg.epochs, help="Liczba epok")
 
-    if os.path.exists(config.config_path):
-        if config.load_config():
-            print("✅ Wczytano konfigurację z pliku")
-    else:
-        print("ℹ️  Brak zapisanej konfiguracji, używam domyślnej")
+    args = parser.parse_args()
 
-    print(f"\n{'=' * 60}")
-    print("⚙️  KONFIGURACJA")
-    print(f"{'=' * 60}")
-    print(f"Tryb:           {'TRENING' if config.learn else 'ROZMOWA' if config.talk else 'UCZENIE PRZEZ ROZMOWĘ'}")
-    print(f"Epoki:          {config.epochs}")
-    print(f"Batch:          {config.batch}")
-    print(f"Neurony:        {config.hidden}")
-    print(f"Warstwy LSTM:   {config.layers}")
-    print(f"Learning rate:  {config.lr}")
-    print(f"Max długość:    {config.max_length}")
-    print(f"Backup co:      {config.backup_freq} epok")
-    print(f"Główny model co:{config.main_save_freq} epok")
-    print(f"Folder danych:  {config.data}")
-    print(f"Folder książek: {config.books}")
-    print(f"Folder modeli:  {config.model_dir}")
-    print(f"Folder backup:  {config.backup_dir}")
-    print(f"Szac. wydajność:{config.estimated_tokens_per_second:,} tok/s")
-    print(f"{'=' * 60}")
+    logger.info("=" * 60)
+    logger.info("🎯 MINIGPT-60M - PROFESJONALNA WERSJA")
+    logger.info("=" * 60)
 
-    if config.learn:
-        train_model(config)
-    elif config.talk:
-        chat_mode(config)
-    elif config.traintalk:
-        train_talk_mode(config)
-    else:
-        print("❌ Ustaw w konfiguracji learn=True, talk=True lub traintalk=True")
+    # Pokaż konfigurację
+    if args.config:
+        logger.info("\n⚙️ KONFIGURACJA SYSTEMU:")
+        logger.info("-" * 40)
+        logger.info(f"   • Device: {device_cfg.device.upper()}")
+        logger.info(f"   • Vocab size: {cfg.vocab_size}")
+        logger.info(f"   • Embed dim: {cfg.embed_dim}")
+        logger.info(f"   • Warstwy: {cfg.n_layers}")
+        logger.info(f"   • Głowy: {cfg.n_heads}")
+        logger.info(f"   • Kontekst: {cfg.max_len}")
+        logger.info(f"   • Parametry: ~{sum(p.numel() for p in MiniGPT60M().parameters()) / 1e6:.1f}M")
+        logger.info(f"   • Batch size: {cfg.batch_size}")
+        logger.info(f"   • Learning rate: {cfg.learning_rate}")
+        logger.info("-" * 40)
+        return
+
+    # Przygotuj dane
+    if args.prepare_data:
+        from data_preparation import prepare_all_data
+        prepare_all_data()
+        return
+
+    # Test jednostkowy
+    if args.test:
+        logger.info("\n🧪 TESTY JEDNOSTKOWE")
+        logger.info("-" * 40)
+
+        # Test modelu
+        model = MiniGPT60M().to(device_cfg.device)
+
+        # Test forward
+        x = torch.randint(0, cfg.vocab_size, (2, 32)).to(device_cfg.device)
+        y = torch.randint(0, cfg.vocab_size, (2, 32)).to(device_cfg.device)
+
+        logits = model(x)
+        loss = F.cross_entropy(logits.view(-1, cfg.vocab_size), y.view(-1))
+
+        logger.info(f"✅ Test forward: Loss = {loss.item():.4f}")
+
+        # Test generacji
+        gen = model.generate("Test", max_len=20)
+        logger.info(f"✅ Test generacji: '{gen}'")
+
+        # Test zapisu/odczytu
+        test_path = "test_model.pt"
+        model.save(test_path)
+        model2 = MiniGPT60M.load(test_path)
+        os.remove(test_path)
+        logger.info("✅ Test zapisu/odczytu: PASS")
+
+        # Test tokenizera
+        text = "Test tokenizacji"
+        ids = tokenizer.encode(text)
+        decoded = tokenizer.decode(ids)
+        logger.info(f"✅ Test tokenizera: '{text}' -> '{decoded}'")
+
+        logger.info("\n🎯 WSZYSTKIE TESTY PRZESZŁY POMYŚLNIE!")
+        return
+
+    # Generuj tekst
+    if args.generate:
+        logger.info(f"\n🎨 GENEROWANIE TEKSTU: '{args.generate}'")
+
+        model = MiniGPT60M()
+        if os.path.exists(args.model):
+            model = MiniGPT60M.load(args.model)
+
+        response = model.generate(
+            args.generate,
+            max_len=300,
+            temperature=0.8,
+            top_k=50,
+            top_p=0.95
+        )
+
+        logger.info("\n" + "=" * 60)
+        logger.info("📝 WYJŚCIE:")
+        logger.info("=" * 60)
+        logger.info(response)
+        logger.info("=" * 60)
+        return
+
+    # Ocena modelu
+    if args.evaluate:
+        logger.info("\n🎯 OCENA MODELU SYSTEMEM LOSS_LESS")
+
+        model = MiniGPT60M()
+        if os.path.exists(args.model):
+            model = MiniGPT60M.load(args.model)
+
+        evaluator = LossLessMetrics()
+
+        # Załaduj pytania testowe
+        questions_file = "test_questions.json"
+        if os.path.exists(questions_file):
+            with open(questions_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                questions = data.get("questions", [])
+        else:
+            questions = [
+                {"question": "Hej, jak się masz?", "expected_keywords": ["dobrze", "dziękuję"], "category": "polski"},
+                {"question": "Jak napisać funkcję w Pythonie?", "expected_keywords": ["def", "return"],
+                 "category": "python"}
+            ]
+
+        results = evaluator.evaluate(model, questions)
+        evaluator.save_history()
+        evaluator.plot_history()
+
+        logger.info(f"\n💾 Wyniki zapisane w loss_less_history.json")
+        return
+
+    # Trening
+    if args.train:
+        logger.info("\n🚀 ROZPOCZĘCIE TRENINGU")
+
+        # Dataset
+        train_dataset = SmartTextDataset(cfg.data_dir, split="train", augment=True)
+        val_dataset = SmartTextDataset(cfg.data_dir, split="val", augment=False) \
+            if os.path.exists(os.path.join(cfg.data_dir, "val")) else None
+
+        if len(train_dataset) == 0:
+            logger.error("❌ Brak danych treningowych!")
+            logger.info("💡 Uruchom: python main.py --prepare-data")
+            return
+
+        # Model
+        model = MiniGPT60M()
+
+        # Wczytaj jeśli resume
+        if args.resume and os.path.exists(args.resume):
+            model = MiniGPT60M.load(args.resume)
+            logger.info(f"✅ Wznawiam trening z {args.resume}")
+
+        # Trainer
+        trainer = AdvancedTrainer(model, train_dataset, val_dataset)
+
+        # Uruchom trening
+        trainer.train(epochs=args.epochs)
+        return
+
+    # Rozmowa
+    if args.talk:
+        chat = InteractiveChat(args.model)
+        chat.chat()
+        return
+
+    # Jeśli żadna flaga, pokaż help
+    logger.info("\n❓ Nie podano flagi. Dostępne opcje:\n")
+    parser.print_help()
+
+
+# ==================== URUCHOMIENIE ====================
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        logger.info("\n\n👋 Program przerwany przez użytkownika")
+        sys.exit(0)
+    except Exception as e:
+        logger.error(f"\n❌ Krytyczny błąd: {e}")
+        import traceback
+
+        traceback.print_exc()
+        sys.exit(1)

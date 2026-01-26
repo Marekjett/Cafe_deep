@@ -1,0 +1,89 @@
+Komputer to urządzenie elektroniczne, które wykonuje obliczenia i przetwarza dane.
+Programowanie polega na pisaniu instrukcji, które komputer wykonuje krok po kroku.
+Procesor jest sercem komputera i odpowiada za wykonywanie instrukcji maszynowych.
+Pamięć RAM przechowuje tymczasowe dane potrzebne do działania programów.
+Dysk twardy lub dysk SSD służy do zapisywania plików i systemu operacyjnego.
+
+System operacyjny zarządza zasobami komputera i umożliwia uruchamianie aplikacji.
+Najpopularniejsze systemy to Windows, Linux oraz macOS.
+Język Python jest często używany do uczenia maszynowego i analizy danych.
+Java pozwala pisać programy działające na wielu platformach.
+C oraz C++ są językami niskiego poziomu, które dają dużą kontrolę nad pamięcią.
+
+Sztuczna inteligencja to dziedzina informatyki zajmująca się tworzeniem inteligentnych systemów.
+Model językowy uczy się przewidywać następne słowo na podstawie poprzednich.
+Sieć neuronowa składa się z warstw neuronów połączonych wagami.
+Proces uczenia polega na minimalizowaniu funkcji straty.
+Gradient descent to algorytm optymalizacji używany w trenowaniu modeli.
+
+Batch size określa ile próbek jest przetwarzanych jednocześnie.
+Epoch oznacza jedno pełne przejście przez cały zbiór danych.
+Learning rate decyduje jak szybko model aktualizuje swoje wagi.
+Overfitting to sytuacja, gdy model zapamiętuje dane zamiast je uogólniać.
+Walidacja służy do sprawdzania jakości modelu na nowych danych.
+
+Minecraft to gra, w której świat zbudowany jest z bloków.
+Każdy blok ma swoje właściwości i może być użyty do budowania konstrukcji.
+Redstone w Minecrafcie działa jak proste obwody elektryczne.
+Można budować bramki logiczne i automatyczne maszyny.
+Komputer w grze może symulować działanie prawdziwego procesora.
+
+Assembler to język niskiego poziomu bliski kodowi maszynowemu.
+Instrukcje są wykonywane bezpośrednio przez procesor.
+Rejestry przechowują tymczasowe wartości podczas obliczeń.
+Stos służy do przechowywania adresów powrotu i zmiennych lokalnych.
+Sterta przechowuje dynamicznie alokowaną pamięć.
+
+Algorytm to zestaw kroków prowadzących do rozwiązania problemu.
+Sortowanie pozwala uporządkować dane w określonej kolejności.
+Wyszukiwanie binarne działa szybko na posortowanych tablicach.
+Struktury danych to listy, tablice, drzewa oraz grafy.
+Każda struktura ma swoje zalety i wady.
+
+Internet łączy miliony komputerów na całym świecie.
+Protokoły określają zasady komunikacji między urządzeniami.
+TCP zapewnia niezawodne przesyłanie danych.
+UDP jest szybszy, ale nie gwarantuje dostarczenia pakietów.
+HTTP służy do przesyłania stron internetowych.
+
+Serwer odpowiada na żądania klienta.
+Klient wysyła zapytanie i czeka na odpowiedź.
+Baza danych przechowuje informacje w uporządkowanej formie.
+Zapytania SQL pozwalają pobierać i modyfikować dane.
+Indeksy przyspieszają wyszukiwanie rekordów.
+
+Uczenie maszynowe znajduje wzorce w dużych zbiorach danych.
+Modele predykcyjne przewidują przyszłe wartości.
+Klasyfikacja przypisuje obiekty do określonych klas.
+Regresja oblicza zależność między zmiennymi.
+Sieci konwolucyjne analizują obrazy.
+
+Sieci rekurencyjne przetwarzają sekwencje danych.
+Transformery są nowoczesną architekturą do przetwarzania języka.
+Mechanizm uwagi pozwala modelowi skupić się na ważnych słowach.
+Tokenizacja dzieli tekst na mniejsze części.
+Embedding zamienia słowa na wektory liczbowe.
+
+Debugowanie polega na znajdowaniu i usuwaniu błędów.
+Kompilator tłumaczy kod źródłowy na kod maszynowy.
+Interpreter wykonuje program linia po linii.
+Optymalizacja poprawia szybkość działania programu.
+Testy jednostkowe sprawdzają poprawność funkcji.
+
+Programista musi logicznie myśleć i analizować problemy.
+Dokumentacja pomaga zrozumieć działanie biblioteki.
+Komentarze wyjaśniają fragmenty kodu.
+Repozytorium przechowuje wersje projektu.
+System kontroli wersji umożliwia cofanie zmian.
+
+Sztuczne neurony są inspirowane działaniem mózgu.
+Warstwa wejściowa odbiera dane.
+Warstwy ukryte przetwarzają informacje.
+Warstwa wyjściowa generuje wynik.
+Funkcja aktywacji wprowadza nieliniowość.
+
+Trening modelu wymaga dużej mocy obliczeniowej.
+Karty graficzne przyspieszają obliczenia macierzowe.
+Pamięć VRAM przechowuje dane modeli.
+Checkpoint zapisuje stan sieci w trakcie treningu.
+Można wznowić uczenie od zapisanego punktu.
